@@ -4,6 +4,8 @@
 
 import { nav } from '../core/nav.js';
 import { themeToggleHTML } from '../core/theme.js';
+import { state } from '../core/state.js';
+import { signInWithGitHub } from '../core/supabase.js';
 
 export const landingHTML = `
   <div class="landing-top">
@@ -56,11 +58,15 @@ export const landingHTML = `
     <h1 class="landing-h">Lost? Bored?<br/><span class="accent">Welcome in.</span></h1>
     <p class="landing-sub">You moved countries. You have no classes. Campus feels like a waiting room, dinner's getting lonely. You're not the only one — just the only one not saying it out loud. So we built a corner.</p>
     <div class="cta-row">
-      <button class="btn btn-primary" data-go="create">
+      <button class="btn btn-primary" data-signin hidden>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8a8 8 0 0 0-8-8z"/></svg>
+        Sign in with GitHub
+      </button>
+      <button class="btn btn-primary" data-go="create" hidden>
         Step inside
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12m-5-5l5 5-5 5" stroke="#1a1420" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button class="btn btn-ghost" data-go="plaza">What's happening</button>
+      <button class="btn btn-ghost" data-go="plaza" hidden>What's happening</button>
     </div>
     <div style="margin-top:28px;font-size:12px;color:var(--dim)">no login required &nbsp;·&nbsp; stays between us &nbsp;·&nbsp; delete your avatar anytime</div>
   </div>
@@ -73,6 +79,25 @@ export const landingHTML = `
 
 export function initLanding() {
   const root = document.getElementById('landing');
+  root.querySelector('[data-signin]').addEventListener('click', signInWithGitHub);
   root.querySelector('[data-go="create"]').addEventListener('click', () => nav('create'));
   root.querySelector('[data-go="plaza"]').addEventListener('click', () => nav('plaza'));
+  refreshLandingAuth();
+}
+
+export function refreshLandingAuth() {
+  const root = document.getElementById('landing');
+  if (!root) return;
+  const signInBtn = root.querySelector('[data-signin]');
+  const stepInBtn = root.querySelector('[data-go="create"]');
+  const whatsUpBtn = root.querySelector('[data-go="plaza"]');
+  if (state.auth) {
+    signInBtn.hidden = true;
+    stepInBtn.hidden = false;
+    whatsUpBtn.hidden = false;
+  } else {
+    signInBtn.hidden = false;
+    stepInBtn.hidden = true;
+    whatsUpBtn.hidden = true;
+  }
 }

@@ -10,3 +10,30 @@ if (!url || !key) {
 }
 
 export const supabase = url && key ? createClient(url, key) : null;
+
+export async function getSession() {
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session;
+}
+
+export async function signInWithGitHub() {
+  if (!supabase) return;
+  await supabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: { redirectTo: window.location.origin + window.location.pathname },
+  });
+}
+
+export async function signOut() {
+  if (!supabase) return;
+  await supabase.auth.signOut();
+  location.reload();
+}
+
+export function onAuthChange(cb) {
+  if (!supabase) return () => {};
+  const { data: { subscription } } =
+    supabase.auth.onAuthStateChange((_event, session) => cb(session));
+  return () => subscription.unsubscribe();
+}

@@ -37,6 +37,7 @@ function rowToMsg(row) {
     text: row.text,
     ts: new Date(row.created_at).getTime(),
     me: false,
+    user_id: row.user_id,
   };
 }
 
@@ -52,11 +53,10 @@ async function loadChats() {
     console.error('[chat] loadChats:', error);
     return;
   }
-  const myName = state.avatar.name;
   for (const row of data || []) {
     if (!state.chats[row.room]) state.chats[row.room] = [];
     const m = rowToMsg(row);
-    if (m.name === myName) m.me = true;
+    if (m.user_id && state.auth && m.user_id === state.auth.id) m.me = true;
     state.chats[row.room].push(m);
   }
   if (state.chatOpen) renderChat();
@@ -74,7 +74,7 @@ function subscribeChats() {
         if (!state.chats[room]) state.chats[room] = [];
         if (state.chats[room].some((m) => m.id === row.id)) return;
         const m = rowToMsg(row);
-        if (m.name === state.avatar.name) m.me = true;
+        if (m.user_id && state.auth && m.user_id === state.auth.id) m.me = true;
         state.chats[room].push(m);
         if (state.chatOpen && roomForChat() === room) renderChat();
       }
@@ -101,6 +101,10 @@ export function makeMyChatMsg(text) {
 }
 
 export async function addChatMsg(room, msg) {
+  if (supabase && !state.auth) {
+    console.warn('[chat] not signed in — skipping insert');
+    return;
+  }
   if (!state.chats[room]) state.chats[room] = [];
 
   if (!supabase) {
@@ -115,7 +119,13 @@ export async function addChatMsg(room, msg) {
 
   const { data, error } = await supabase
     .from('messages')
-    .insert({ room, name: msg.name, avatar: msg.avatar, text: msg.text })
+    .insert({
+      room,
+      name: msg.name,
+      avatar: msg.avatar,
+      text: msg.text,
+      user_id: state.auth.id,
+    })
     .select()
     .single();
 

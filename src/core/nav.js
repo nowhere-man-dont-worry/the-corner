@@ -8,6 +8,11 @@ import { renderChat, toggleChat } from './chat.js';
 export const SUBVIEWS = ['plaza', 'council', 'suggestions', 'events', 'guide', 'members'];
 
 export function nav(view, sub) {
+  // Auth gate: anything past landing requires a session.
+  if (!state.auth && (view === 'create' || view === 'app' || SUBVIEWS.includes(view))) {
+    view = 'landing';
+    sub = undefined;
+  }
   state.view = view;
   if (sub) state.sub = sub;
 
@@ -62,6 +67,7 @@ export function initNav() {
 // Called once at boot to pick up any initial hash.
 export function bootFromHash() {
   const h = location.hash.replace('#', '');
+  if (!state.auth) { nav('landing'); return; }
   if (h === 'create') nav('create');
   else if (SUBVIEWS.includes(h)) nav('app', h);
   else nav('landing');

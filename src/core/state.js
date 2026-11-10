@@ -49,4 +49,5 @@ export const state = {
 
   // theme
   theme: 'dark',               // 'dark' | 'light'
+  auth: null, // { id, github_username, avatar_url } when signed in
 };

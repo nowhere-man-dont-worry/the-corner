@@ -88,6 +88,10 @@ export const plazaHTML = `
         <div id="npcs"></div>
         <div class="me-avatar" id="me-avatar"></div>
 
+        <div class="entering-cue" id="entering-cue">
+          <span class="label">ENTERING <span id="entering-name">—</span></span>
+          <div class="bar"><div class="bar-fill" id="entering-bar"></div></div>
+        </div>
         <div class="chat-dock">
           <input id="chat-input" placeholder="say something…"/>
           <button data-plaza-send>say</button>
@@ -102,6 +106,15 @@ const keys = {};
 let lastFrame = 0;
 let npcsLastMove = 0;
 let loopRunning = false;
+
+const DOORS = {
+  cinema:  { cls: 'd-cinema',  label: 'CINEMA',    action: () => { toast('Cinema opens next week — the first stream is Fri 20:30.'); state.plaza.y = 480; } },
+  council: { cls: 'd-council', label: 'COUNCIL',   action: () => nav('council') },
+  game:    { cls: 'd-game',    label: 'GAME ROOM', action: () => { toast('Game Room: Mario Kart Sunday 14:00.'); state.plaza.y = 480; } },
+};
+const ENTER_HOLD_MS = 1200;
+let hoverDoor = null;
+let hoverElapsed = 0;
 
 // ---- NPC rendering ----
 function renderNPCs() {
@@ -164,8 +177,9 @@ function updateMe(dt) {
   const moving = vx !== 0 || vy !== 0;
   if (moving) {
     const sp = 0.22 * dt;
-    state.plaza.x = Math.max(60, Math.min(700, state.plaza.x + vx * sp));
-    state.plaza.y = Math.max(440, Math.min(600, state.plaza.y + vy * sp));
+    const b = walkBounds();
+    state.plaza.x = Math.max(b.minX, Math.min(b.maxX, state.plaza.x + vx * sp));
+    state.plaza.y = Math.max(b.minY, Math.min(600, state.plaza.y + vy * sp));
   }
 
   const me = document.getElementById('me-avatar');
@@ -173,19 +187,81 @@ function updateMe(dt) {
   me.style.left = state.plaza.x + 'px';
   me.style.bottom = 600 - state.plaza.y + 'px';
   me.classList.toggle('walking', moving);
+}
 
-  if (moving) {
-    if (state.plaza.y < 455) {
-      if (state.plaza.x < 150) {
-        toast('Cinema opens next week.');
-        state.plaza.y = 480;
-      } else if (state.plaza.x > 580) {
-        nav('council');
-      } else if (state.plaza.x > 290 && state.plaza.x < 440) {
-        toast('Game Room: Mario Kart Sunday.');
-        state.plaza.y = 480;
-      }
+// Walkable area, measured from the live room so every door is reachable at
+// any window size. Doors are anchored to the room's top (and the council door
+// to its right edge) while the avatar is anchored to the bottom, so fixed
+// numbers drift as the room resizes. Falls back to the old limits when the
+// room isn't laid out (e.g. while another view is showing).
+function walkBounds() {
+  const room = document.getElementById('room');
+  const me = document.getElementById('me-avatar');
+  if (!room || !me || !room.clientWidth) return { minX: 60, maxX: 700, minY: 440 };
+  const rr = room.getBoundingClientRect();
+  const meW = me.offsetWidth || 60;
+  const meH = me.offsetHeight || 104;
+  let doorBottom = 0;
+  for (const meta of Object.values(DOORS)) {
+    const el = room.querySelector('.' + meta.cls);
+    if (el) doorBottom = Math.max(doorBottom, el.getBoundingClientRect().bottom - rr.top);
+  }
+  // Let the avatar's head overlap the lowest door edge by ~12px.
+  const maxBottom = Math.max(160, rr.height - meH - doorBottom + 12);
+  return { minX: 60, maxX: Math.max(60, rr.width - meW - 20), minY: 600 - maxBottom };
+}
+
+function rectsOverlap(a, b) {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function checkDoorHover(dt) {
+  const room = document.getElementById('room');
+  const meEl = document.getElementById('me-avatar');
+  const cue  = document.getElementById('entering-cue');
+  if (!room || !meEl || !cue) return;
+
+  const rr = room.getBoundingClientRect();
+  const mr = meEl.getBoundingClientRect();
+  const avatarBox = {
+    left:   mr.left - rr.left, right:  mr.right - rr.left,
+    top:    mr.top  - rr.top,  bottom: mr.bottom - rr.top,
+  };
+
+  let hit = null, hitRect = null;
+  for (const [key, meta] of Object.entries(DOORS)) {
+    const el = room.querySelector('.' + meta.cls);
+    if (!el) continue;
+    const dr = el.getBoundingClientRect();
+    const box = {
+      left:   dr.left - rr.left, right:  dr.right - rr.left,
+      top:    dr.top  - rr.top,  bottom: dr.bottom - rr.top,
+    };
+    if (rectsOverlap(avatarBox, box)) { hit = key; hitRect = box; break; }
+  }
+
+  if (hit && hoverDoor === hit) {
+    hoverElapsed += dt;
+    document.getElementById('entering-bar').style.width =
+      Math.min(100, (hoverElapsed / ENTER_HOLD_MS) * 100) + '%';
+    cue.style.left = ((hitRect.left + hitRect.right) / 2) + 'px';
+    cue.style.top  = (hitRect.top - 56) + 'px';
+    if (hoverElapsed >= ENTER_HOLD_MS) {
+      cue.classList.remove('show');
+      const fn = DOORS[hit].action;
+      hoverDoor = null; hoverElapsed = 0;
+      fn();
     }
+  } else if (hit && hoverDoor !== hit) {
+    hoverDoor = hit; hoverElapsed = 0;
+    document.getElementById('entering-name').textContent = DOORS[hit].label;
+    document.getElementById('entering-bar').style.width = '0%';
+    cue.style.left = ((hitRect.left + hitRect.right) / 2) + 'px';
+    cue.style.top  = (hitRect.top - 56) + 'px';
+    cue.classList.add('show');
+  } else if (!hit && hoverDoor) {
+    hoverDoor = null; hoverElapsed = 0;
+    cue.classList.remove('show');
   }
 }
 
@@ -194,6 +270,7 @@ function loop(ts) {
   lastFrame = ts;
   if (state.sub === 'plaza') {
     updateMe(dt);
+    checkDoorHover(dt);
     updateNPCs(ts);
     if (state.plaza.bubble && ts > state.plaza.bubbleUntil) {
       state.plaza.bubble = null;

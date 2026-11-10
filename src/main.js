@@ -3,12 +3,14 @@
 
 import './style.css';
 
-import { initNav, bootFromHash } from './core/nav.js';
+import { state } from './core/state.js';
+import { initNav, bootFromHash, nav } from './core/nav.js';
 import { loadTheme, initThemeButtons } from './core/theme.js';
 import { initChat, chatDrawerHTML } from './core/chat.js';
 import { toastHTML } from './core/toast.js';
+import { getSession, onAuthChange } from './core/supabase.js';
 
-import { landingHTML, initLanding } from './views/landing.js';
+import { landingHTML, initLanding, refreshLandingAuth } from './views/landing.js';
 import { createHTML, initCreate } from './views/create.js';
 import { appNavHTML, initAppShell } from './views/app-shell.js';
 import { plazaHTML, initPlaza } from './views/plaza.js';
@@ -18,40 +20,61 @@ import { eventsHTML, initEvents } from './views/events.js';
 import { guideHTML, initGuide } from './views/guide.js';
 import { membersHTML, initMembers } from './views/members.js';
 
-// 1. Preload persisted state before any render.
-loadTheme();
-loadSugComments();
+function hydrateAuth(session) {
+  if (!session) { state.auth = null; return; }
+  const u = session.user;
+  state.auth = {
+    id: u.id,
+    github_username: u.user_metadata?.user_name || 'anon',
+    avatar_url: u.user_metadata?.avatar_url || null,
+  };
+  state.avatar.name = state.auth.github_username;
+}
 
-// 2. Build the page in one shot.
-document.body.innerHTML = `
-  <section id="landing" class="view active">${landingHTML}</section>
-  <section id="create" class="view">${createHTML}</section>
-  <section id="app" class="view">
-    ${appNavHTML}
-    <div class="subview active" data-sub="plaza">${plazaHTML}</div>
-    <div class="subview" data-sub="council">${councilHTML}</div>
-    <div class="subview" data-sub="suggestions">${suggestionsHTML}</div>
-    <div class="subview" data-sub="events">${eventsHTML}</div>
-    <div class="subview" data-sub="guide">${guideHTML}</div>
-    <div class="subview" data-sub="members">${membersHTML}</div>
-  </section>
-  ${chatDrawerHTML}
-  ${toastHTML}
-`;
+async function boot() {
+  loadTheme();
+  loadSugComments();
 
-// 3. Wire up each view's handlers now that the DOM exists.
-initLanding();
-initCreate();
-initAppShell();
-initPlaza();
-initCouncil();
-initSuggestions();
-initEvents();
-initGuide();
-initMembers();
-initNav();
-initChat();
-initThemeButtons();
+  const session = await getSession();
+  hydrateAuth(session);
 
-// 4. Route to whatever view matches the current URL hash.
-bootFromHash();
+  document.body.innerHTML = `
+    <section id="landing" class="view active">${landingHTML}</section>
+    <section id="create" class="view">${createHTML}</section>
+    <section id="app" class="view">
+      ${appNavHTML}
+      <div class="subview active" data-sub="plaza">${plazaHTML}</div>
+      <div class="subview" data-sub="council">${councilHTML}</div>
+      <div class="subview" data-sub="suggestions">${suggestionsHTML}</div>
+      <div class="subview" data-sub="events">${eventsHTML}</div>
+      <div class="subview" data-sub="guide">${guideHTML}</div>
+      <div class="subview" data-sub="members">${membersHTML}</div>
+    </section>
+    ${chatDrawerHTML}
+    ${toastHTML}
+  `;
+
+  initLanding();
+  initCreate();
+  initAppShell();
+  initPlaza();
+  initCouncil();
+  initSuggestions();
+  initEvents();
+  initGuide();
+  initMembers();
+  initNav();
+  initChat();
+  initThemeButtons();
+
+  onAuthChange((session) => {
+    const wasSignedIn = !!state.auth;
+    hydrateAuth(session);
+    refreshLandingAuth();
+    if (!wasSignedIn && session) nav('create');
+  });
+
+  bootFromHash();
+}
+
+boot();

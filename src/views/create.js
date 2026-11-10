@@ -8,6 +8,7 @@ import { PALETTE } from '../avatars/palette.js';
 import { hairOrder } from '../avatars/hair/index.js';
 import { themeToggleHTML } from '../core/theme.js';
 import { toast } from '../core/toast.js';
+import { signOut } from '../core/supabase.js';
 
 export const createHTML = `
   <div class="create-wrap">
@@ -32,6 +33,7 @@ export const createHTML = `
         <div class="mono preview-label" style="color:var(--muted);font-size:15px;letter-spacing:0.12em">◉ PREVIEW</div>
         <div class="preview-stage" id="preview-stage"></div>
         <input class="preview-name" id="avatar-name" value="noa_from_tel_aviv" placeholder="your handle" maxlength="60"/>
+        <div class="signed-in-badge" id="avatar-signed-in-badge" hidden></div>
         <button class="preview-shuffle" data-randomize>
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M3 7a4 4 0 1 1 1.17 2.83M3 7L1 9m2-2l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           surprise me
@@ -162,6 +164,22 @@ function randomizeAvatar() {
   renderSwatches();
 }
 
+function refreshAuthBadge() {
+  const badge = document.getElementById('avatar-signed-in-badge');
+  const nameInput = document.getElementById('avatar-name');
+  if (!badge || !nameInput) return;
+  if (state.auth) {
+    badge.innerHTML = `◉ SIGNED IN AS @${state.auth.github_username} <a data-signout>sign out</a>`;
+    badge.hidden = false;
+    nameInput.value = state.auth.github_username;
+    nameInput.readOnly = true;
+    badge.querySelector('[data-signout]').addEventListener('click', signOut);
+  } else {
+    badge.hidden = true;
+    nameInput.readOnly = false;
+  }
+}
+
 export function initCreate() {
   const root = document.getElementById('create');
 
@@ -188,4 +206,5 @@ export function initCreate() {
 
   renderAvatarPreview();
   renderSwatches();
+  refreshAuthBadge();
 }

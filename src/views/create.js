@@ -9,6 +9,7 @@ import { hairOrder } from '../avatars/hair/index.js';
 import { themeToggleHTML } from '../core/theme.js';
 import { toast } from '../core/toast.js';
 import { signOut } from '../core/supabase.js';
+import { saveProfile, PROFILE_TAGS } from '../core/profile.js';
 
 export const createHTML = `
   <div class="create-wrap">
@@ -59,6 +60,15 @@ export const createHTML = `
         <div class="panel">
           <div class="panel-label" id="color-label">COLOUR · HAIR</div>
           <div class="sw-row" id="color-swatches"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-label">YOU</div>
+          <input class="profile-input" id="display-name-input" placeholder="your name (e.g. Wasi)" maxlength="60"/>
+          <input class="profile-input" id="origin-input" placeholder="🇵🇰 Karachi → 🇫🇷 Vitry-sur-Seine" maxlength="100" style="margin-top:8px"/>
+          <textarea class="profile-ta" id="bio-input" placeholder="what you're about (bread, music, debugging…)" maxlength="240"></textarea>
+          <div class="panel-label" style="margin-top:14px">TAGS · pick up to 6</div>
+          <div class="chip-row" id="profile-tags-row"></div>
         </div>
 
         <div class="panel" style="background:transparent;border-style:dashed">
@@ -145,6 +155,10 @@ function renderSwatches() {
       else if (currentCreateTab === 'flag') toast('Flag badge saved.');
       else state.avatar[currentCreateTab] = c;
       renderAvatarPreview();
+      if (currentCreateTab === 'hair') debouncedSave({ hair_color: c });
+      else if (currentCreateTab === 'skin') debouncedSave({ skin: c });
+      else if (currentCreateTab === 'top') debouncedSave({ top: c });
+      else if (currentCreateTab === 'bottom') debouncedSave({ bottom: c });
       renderSwatches();
     })
   );
@@ -162,6 +176,64 @@ function randomizeAvatar() {
   );
   renderAvatarPreview();
   renderSwatches();
+  debouncedSave({
+    hair: state.avatar.hair,
+    hair_color: state.avatar.hairColor,
+    skin: state.avatar.skin,
+    top: state.avatar.top,
+    bottom: state.avatar.bottom,
+  });
+}
+
+// Edits to different fields inside the 500ms window are merged into one
+// patch, so typing a name then quickly a bio (or clicking two colours)
+// doesn't drop the earlier change.
+let saveTimer = null;
+let pendingPatch = {};
+function debouncedSave(patch) {
+  pendingPatch = { ...pendingPatch, ...patch };
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const p = pendingPatch;
+    pendingPatch = {};
+    saveProfile(p);
+  }, 500);
+}
+
+function renderProfileTags() {
+  const row = document.getElementById('profile-tags-row');
+  if (!row) return;
+  const selected = state.profile?.tags || [];
+  row.innerHTML = PROFILE_TAGS.map(t =>
+    `<button class="chip ${selected.includes(t) ? 'on' : ''}" data-tag="${t}">${t}</button>`
+  ).join('');
+  row.querySelectorAll('.chip').forEach(c => c.addEventListener('click', async () => {
+    const t = c.dataset.tag;
+    const current = state.profile?.tags || [];
+    let next;
+    if (current.includes(t)) next = current.filter(x => x !== t);
+    else {
+      if (current.length >= 6) return;
+      next = [...current, t];
+    }
+    await saveProfile({ tags: next });
+    renderProfileTags();
+  }));
+}
+
+function syncProfileFields() {
+  const p = state.profile;
+  const dn = document.getElementById('display-name-input');
+  const or = document.getElementById('origin-input');
+  const bi = document.getElementById('bio-input');
+  if (dn) dn.value = p?.display_name || '';
+  if (or) or.value = p?.origin || '';
+  if (bi) bi.value = p?.bio || '';
+  // Highlight the saved hair style, not always the first chip.
+  document.querySelectorAll('#hair-style .chip').forEach((c) =>
+    c.classList.toggle('on', c.dataset.style === state.avatar.hair)
+  );
+  renderProfileTags();
 }
 
 function refreshAuthBadge() {
@@ -193,6 +265,7 @@ export function initCreate() {
       c.classList.add('on');
       state.avatar.hair = c.dataset.style;
       renderAvatarPreview();
+      debouncedSave({ hair: c.dataset.style });
     })
   );
 
@@ -207,4 +280,14 @@ export function initCreate() {
   renderAvatarPreview();
   renderSwatches();
   refreshAuthBadge();
+  syncProfileFields();
+  document.getElementById('display-name-input')?.addEventListener('input', e =>
+    debouncedSave({ display_name: e.target.value.trim() || null })
+  );
+  document.getElementById('origin-input')?.addEventListener('input', e =>
+    debouncedSave({ origin: e.target.value.trim() || null })
+  );
+  document.getElementById('bio-input')?.addEventListener('input', e =>
+    debouncedSave({ bio: e.target.value.trim() || null })
+  );
 }

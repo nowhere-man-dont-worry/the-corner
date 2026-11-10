@@ -3,7 +3,7 @@
 import { state } from '../core/state.js';
 import { toast } from '../core/toast.js';
 import { avatarSVG } from '../avatars/render.js';
-import { MEMBERS } from '../data/members.js';
+import { escapeHtml } from '../utils/html.js';
 
 export const membersHTML = `
   <div class="page">
@@ -49,27 +49,32 @@ export const membersHTML = `
   </div>
 `;
 
-function renderMembers() {
+export function renderMembers() {
   const grid = document.getElementById('mem-grid');
   if (!grid) return;
-  grid.innerHTML =
-    MEMBERS.map(
-      (m) => `
-    <div class="mcard ${m.me ? 'me' : ''}">
-      <span class="who-dot ${m.online ? '' : m.away ? 'away' : ''}" style="${!m.online && !m.away ? 'background:var(--border);box-shadow:none' : ''}"></span>
-      ${avatarSVG({ hair: 'mop', hairColor: m.hair, skin: m.skin, top: m.top, bottom: m.bottom }, 72)}
-      <div class="mcard-name">${m.name}</div>
-      <div class="mcard-origin">${m.origin}</div>
-      <div class="mcard-bio">"${m.bio}"</div>
-      <div class="mcard-tags">${m.tags.map((t) => `<span class="mcard-tag ${t === 'YOU' ? 'you' : ''}">${t}</span>`).join('')}</div>
-    </div>`
-    ).join('') +
-    `
-    <div class="mcard" style="justify-content:center;align-items:center">
-      <div style="font-family:var(--display);font-size:36px;color:var(--lilac);margin-bottom:4px;font-weight:700">+20</div>
-      <div style="font-size:13px;color:var(--muted);line-height:1.4;text-align:center">more classmates<br/>still making their avatars</div>
-    </div>
-  `;
+  const profiles = state.profiles || [];
+  if (profiles.length === 0) {
+    grid.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--muted);font-style:italic;grid-column:1/-1">no one has signed in yet. be first.</div>';
+    return;
+  }
+  grid.innerHTML = profiles.map(p => {
+    const isMe = state.auth && p.user_id === state.auth.id;
+    const name = p.display_name || p.handle;
+    const tags = p.tags || [];
+    return `
+      <div class="mcard ${isMe ? 'me' : ''}">
+        <span class="who-dot"></span>
+        ${avatarSVG({ hair: p.hair || 'mop', hairColor: p.hair_color, skin: p.skin, top: p.top, bottom: p.bottom }, 72)}
+        <div class="mcard-name">${escapeHtml(name)}</div>
+        <div class="mcard-origin">${escapeHtml(p.origin || '@' + p.handle)}</div>
+        <div class="mcard-bio">${p.bio ? '"' + escapeHtml(p.bio) + '"' : ''}</div>
+        <div class="mcard-tags">
+          ${isMe ? '<span class="mcard-tag you">YOU</span>' : ''}
+          ${tags.map(t => `<span class="mcard-tag">${escapeHtml(t)}</span>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function toggleMatch() {

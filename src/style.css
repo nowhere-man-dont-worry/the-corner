@@ -1628,3 +1628,32 @@ body.app-view { transition: padding-right 0.25s ease; }
   background: var(--coral);
   transition: width 0.1s linear;
 }
+.profile-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--fg);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+.profile-input:focus { border-color: var(--coral); }
+.profile-ta {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--fg);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  height: 70px;
+  margin-top: 8px;
+  outline: none;
+  box-sizing: border-box;
+}
+.profile-ta:focus { border-color: var(--coral); }

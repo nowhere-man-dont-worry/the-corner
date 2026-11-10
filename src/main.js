@@ -5,7 +5,7 @@ import './style.css';
 
 import { initNav, bootFromHash } from './core/nav.js';
 import { loadTheme, initThemeButtons } from './core/theme.js';
-import { loadChats, initChat, chatDrawerHTML } from './core/chat.js';
+import { initChat, chatDrawerHTML } from './core/chat.js';
 import { toastHTML } from './core/toast.js';
 
 import { landingHTML, initLanding } from './views/landing.js';
@@ -20,7 +20,6 @@ import { membersHTML, initMembers } from './views/members.js';
 
 // 1. Preload persisted state before any render.
 loadTheme();
-loadChats();
 loadSugComments();
 
 // 2. Build the page in one shot.

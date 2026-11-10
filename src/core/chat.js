@@ -1,53 +1,85 @@
-// Chat drawer system — one thread per room (plaza, council, suggestions, ...).
-// Seeded from src/data/chat-seeds.js so the pitch looks lived-in; user messages
-// persist in localStorage.
+// Chat drawer system — one thread per room. Backed by Supabase.
 //
-// The rail/drawer visual behavior lives entirely in style.css; this file only
-// manages state, DOM content and open/close.
+// Data flow:
+//  - loadChats() fetches recent messages into state.chats on boot.
+//  - subscribeChats() opens a realtime subscription; new inserts arrive
+//    push-style and append to state.chats, re-rendering if open.
+//  - addChatMsg() is optimistic: it shows the message immediately with a
+//    temp id, then INSERTs. On error it rolls back. On success it swaps
+//    the temp for the real row. The realtime echo is deduped by row id.
+//  - If VITE_SUPABASE_URL/ANON_KEY are missing, we fall back to local-only.
 
 import { state } from './state.js';
 import { avatarSVG } from '../avatars/render.js';
-import { SEED_CHATS } from '../data/chat-seeds.js';
 import { formatTime } from '../utils/time.js';
 import { escapeHtml } from '../utils/html.js';
-import { load, save } from '../utils/storage.js';
+import { supabase } from './supabase.js';
 
 export const ROOM_LABELS = {
-  plaza: 'Plaza',
-  council: 'Council',
-  suggestions: 'Suggestions',
-  events: 'Events',
-  guide: 'Guide',
-  members: 'Members',
+  plaza: 'Plaza', council: 'Council', suggestions: 'Suggestions',
+  events: 'Events', guide: 'Guide', members: 'Members',
 };
-
 export const ROOM_COUNTS = {
-  plaza: '14 here now',
-  council: '4 posting · motion open',
-  suggestions: '27 following',
-  events: '11 this week',
-  guide: '9 contributors',
-  members: '28 of us, 14 online',
+  plaza: '14 here now', council: '4 posting · motion open',
+  suggestions: '27 following', events: '11 this week',
+  guide: '9 contributors', members: '28 of us, 14 online',
 };
 
-export function loadChats() {
-  state.chats = {};
-  for (const r in SEED_CHATS) state.chats[r] = [...SEED_CHATS[r]];
-  const saved = load('corner-chats');
-  if (saved) {
-    for (const room in saved) {
-      state.chats[room] = (state.chats[room] || []).concat(saved[room] || []);
-    }
-  }
+function emptyRooms() {
+  return { plaza: [], council: [], suggestions: [], events: [], guide: [], members: [] };
 }
 
-// Only persist the user's own messages (seeds are in the repo, no need to copy them).
-function saveUserChats() {
-  const user = {};
-  for (const room in state.chats) {
-    user[room] = state.chats[room].filter((m) => m.me);
+function rowToMsg(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    avatar: row.avatar,
+    text: row.text,
+    ts: new Date(row.created_at).getTime(),
+    me: false,
+  };
+}
+
+async function loadChats() {
+  state.chats = emptyRooms();
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .order('created_at', { ascending: true })
+    .limit(500);
+  if (error) {
+    console.error('[chat] loadChats:', error);
+    return;
   }
-  save('corner-chats', user);
+  const myName = state.avatar.name;
+  for (const row of data || []) {
+    if (!state.chats[row.room]) state.chats[row.room] = [];
+    const m = rowToMsg(row);
+    if (m.name === myName) m.me = true;
+    state.chats[row.room].push(m);
+  }
+  if (state.chatOpen) renderChat();
+}
+
+function subscribeChats() {
+  if (!supabase) return;
+  supabase
+    .channel('messages-stream')
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages' },
+      (payload) => {
+        const row = payload.new;
+        const room = row.room;
+        if (!state.chats[room]) state.chats[room] = [];
+        if (state.chats[room].some((m) => m.id === row.id)) return;
+        const m = rowToMsg(row);
+        if (m.name === state.avatar.name) m.me = true;
+        state.chats[room].push(m);
+        if (state.chatOpen && roomForChat() === room) renderChat();
+      }
+    )
+    .subscribe();
 }
 
 export function roomForChat() {
@@ -65,15 +97,36 @@ export function makeMyChatMsg(text) {
       bottom: state.avatar.bottom,
     },
     text,
-    ts: Date.now(),
-    me: true,
   };
 }
 
-export function addChatMsg(room, msg) {
+export async function addChatMsg(room, msg) {
   if (!state.chats[room]) state.chats[room] = [];
-  state.chats[room].push(msg);
-  if (msg.me) saveUserChats();
+
+  if (!supabase) {
+    state.chats[room].push({ ...msg, ts: Date.now(), me: true });
+    if (state.chatOpen && roomForChat() === room) renderChat();
+    return;
+  }
+
+  const tempId = 'temp-' + Math.random().toString(36).slice(2);
+  state.chats[room].push({ id: tempId, ...msg, ts: Date.now(), me: true });
+  if (state.chatOpen && roomForChat() === room) renderChat();
+
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({ room, name: msg.name, avatar: msg.avatar, text: msg.text })
+    .select()
+    .single();
+
+  const idx = state.chats[room].findIndex((m) => m.id === tempId);
+  if (error) {
+    if (idx >= 0) state.chats[room].splice(idx, 1);
+    if (state.chatOpen && roomForChat() === room) renderChat();
+    console.error('[chat] addChatMsg:', error);
+    return;
+  }
+  if (idx >= 0) state.chats[room][idx] = { ...rowToMsg(data), me: true };
   if (state.chatOpen && roomForChat() === room) renderChat();
 }
 
@@ -105,9 +158,7 @@ export function renderChat() {
     list.innerHTML = `<div class="chat-empty">nothing in ${room} yet. go first.</div>`;
     return;
   }
-  list.innerHTML = msgs
-    .map(
-      (m) => `
+  list.innerHTML = msgs.map((m) => `
     <div class="chat-msg ${m.me ? 'me' : ''}">
       ${avatarSVG(m.avatar, 28)}
       <div class="chat-msg-body">
@@ -118,9 +169,7 @@ export function renderChat() {
         <div class="chat-msg-text">${escapeHtml(m.text)}</div>
       </div>
     </div>
-  `
-    )
-    .join('');
+  `).join('');
   list.scrollTop = list.scrollHeight;
 }
 
@@ -131,14 +180,11 @@ function sendDrawerChat() {
   i.value = '';
   const room = roomForChat();
   addChatMsg(room, makeMyChatMsg(text.slice(0, 200)));
-  // Plaza chat dock and the drawer share the plaza thread — echo as a bubble
-  // so you can see your message over your avatar when you're in the plaza.
   if (room === 'plaza') {
     import('../views/plaza.js').then((p) => p.showMyBubble(text.slice(0, 60)));
   }
 }
 
-// The drawer HTML — rendered once by main.js, event handlers wired here.
 export const chatDrawerHTML = `
   <aside id="chat-drawer" class="chat-drawer" aria-hidden="true">
     <button class="chat-rail" data-chat-rail aria-label="Open chat">
@@ -172,4 +218,7 @@ export function initChat() {
   document.getElementById('chat-drawer-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendDrawerChat();
   });
+  state.chats = emptyRooms();
+  loadChats();
+  subscribeChats();
 }

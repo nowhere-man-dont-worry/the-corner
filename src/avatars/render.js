@@ -9,12 +9,16 @@
 
 import { hairStyles } from './hair/index.js';
 
+function safeColor(c) {
+  return typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? c : '#9a8ca8';
+}
+
 export function avatarSVG(a, scale = 72) {
   const h = (scale * 1.5) | 0;
-  const H = a.hairColor || a.hair;
-  const S = a.skin;
-  const T = a.top;
-  const B = a.bottom;
+  const H = safeColor(a.hairColor || a.hair);
+  const S = safeColor(a.skin);
+  const T = safeColor(a.top);
+  const B = safeColor(a.bottom);
 
   const shapeKey =
     a.hair && typeof a.hair === 'string' && !a.hair.startsWith('#') ? a.hair : 'mop';

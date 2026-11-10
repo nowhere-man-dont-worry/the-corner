@@ -74,6 +74,16 @@ async function boot() {
     if (!wasSignedIn && session) nav('create');
   });
 
+  // After a GitHub OAuth return, jump straight to the avatar creator once.
+  try {
+    const target = sessionStorage.getItem('corner-post-auth');
+    if (target && state.auth) {
+      sessionStorage.removeItem('corner-post-auth');
+      nav(target);
+      return;
+    }
+  } catch (e) {}
+
   bootFromHash();
 }
 

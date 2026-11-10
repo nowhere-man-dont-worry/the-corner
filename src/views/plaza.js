@@ -108,9 +108,9 @@ let npcsLastMove = 0;
 let loopRunning = false;
 
 const DOORS = {
-  cinema:  { cls: 'd-cinema',  label: 'CINEMA',    action: () => { toast('Cinema opens next week — the first stream is Fri 20:30.'); state.plaza.y = 480; } },
+  cinema:  { cls: 'd-cinema',  label: 'CINEMA',    action: () => toast('Cinema opens next week — the first stream is Fri 20:30.') },
   council: { cls: 'd-council', label: 'COUNCIL',   action: () => nav('council') },
-  game:    { cls: 'd-game',    label: 'GAME ROOM', action: () => { toast('Game Room: Mario Kart Sunday 14:00.'); state.plaza.y = 480; } },
+  game:    { cls: 'd-game',    label: 'GAME ROOM', action: () => toast('Game Room: Mario Kart Sunday 14:00.') },
 };
 const ENTER_HOLD_MS = 1200;
 let hoverDoor = null;
@@ -249,6 +249,7 @@ function checkDoorHover(dt) {
     if (hoverElapsed >= ENTER_HOLD_MS) {
       cue.classList.remove('show');
       const fn = DOORS[hit].action;
+      state.plaza.y = 520;              // nudge avatar off the door's rect
       hoverDoor = null; hoverElapsed = 0;
       fn();
     }

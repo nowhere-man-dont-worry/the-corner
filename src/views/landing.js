@@ -68,7 +68,7 @@ export const landingHTML = `
       </button>
       <button class="btn btn-ghost" data-go="plaza" hidden>What's happening</button>
     </div>
-    <div style="margin-top:28px;font-size:12px;color:var(--dim)">no login required &nbsp;·&nbsp; stays between us &nbsp;·&nbsp; delete your avatar anytime</div>
+    <div style="margin-top:28px;font-size:12px;color:var(--dim)">github sign-in &nbsp;·&nbsp; just for our class &nbsp;·&nbsp; leave anytime</div>
   </div>
 
   <div class="landing-foot">

@@ -19,6 +19,7 @@ export async function getSession() {
 
 export async function signInWithGitHub() {
   if (!supabase) return;
+  try { sessionStorage.setItem('corner-post-auth', 'create'); } catch (e) {}
   await supabase.auth.signInWithOAuth({
     provider: 'github',
     options: { redirectTo: window.location.origin + window.location.pathname },

@@ -7,3 +7,10 @@
 - Always `npm run build` before pushing.
 - When touching Supabase schema or auth, remind me to run the SQL in the
   dashboard before pushing code that depends on it.
+
+## TODO
+
+- Week of 2026-11-18: drop `profiles.origin`
+  (`alter table profiles drop column origin;`). It was replaced by
+  `country_code` + `locality` on 2026-11-11 and kept for one release so prod
+  can be sanity-checked before the old free-text data is lost.

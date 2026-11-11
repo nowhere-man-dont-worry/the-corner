@@ -4,6 +4,14 @@ import { state } from '../core/state.js';
 import { toast } from '../core/toast.js';
 import { avatarSVG } from '../avatars/render.js';
 import { escapeHtml } from '../utils/html.js';
+import { flagOf, countryName } from '../core/countries.js';
+
+// "🇵🇰 Pakistan → Vitry-Sur-Seine", "🇵🇰 Pakistan", or "" with no country.
+function originLine(p) {
+  if (!p.country_code) return '';
+  const base = `${flagOf(p.country_code)} ${countryName(p.country_code)}`;
+  return p.locality ? `${base} → ${p.locality}` : base;
+}
 
 export const membersHTML = `
   <div class="page">
@@ -66,7 +74,7 @@ export function renderMembers() {
         <span class="who-dot"></span>
         ${avatarSVG({ hair: p.hair || 'mop', hairColor: p.hair_color, skin: p.skin, top: p.top, bottom: p.bottom }, 72)}
         <div class="mcard-name">${escapeHtml(name)}</div>
-        <div class="mcard-origin">${escapeHtml(p.origin || '@' + p.handle)}</div>
+        <div class="mcard-origin">${escapeHtml(originLine(p))}</div>
         <div class="mcard-bio">${p.bio ? '"' + escapeHtml(p.bio) + '"' : ''}</div>
         <div class="mcard-tags">
           ${isMe ? '<span class="mcard-tag you">YOU</span>' : ''}

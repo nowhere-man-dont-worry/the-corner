@@ -10,6 +10,8 @@ import { themeToggleHTML } from '../core/theme.js';
 import { toast } from '../core/toast.js';
 import { signOut } from '../core/supabase.js';
 import { saveProfile, PROFILE_TAGS } from '../core/profile.js';
+import { COUNTRY_CODES, flagOf, countryName, isValidLocality } from '../core/countries.js';
+import { escapeHtml } from '../utils/html.js';
 
 export const createHTML = `
   <div class="create-wrap">
@@ -65,7 +67,14 @@ export const createHTML = `
         <div class="panel">
           <div class="panel-label">YOU</div>
           <input class="profile-input" id="display-name-input" placeholder="your name (e.g. Wasi)" maxlength="60"/>
-          <input class="profile-input" id="origin-input" placeholder="🇵🇰 Karachi → 🇫🇷 Vitry-sur-Seine" maxlength="100" style="margin-top:8px"/>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <span id="country-flag" style="font-size:20px;min-width:28px;text-align:center" aria-hidden="true"></span>
+            <input class="profile-input" id="country-input" list="country-options" placeholder="where you're from — type to search" autocomplete="off"/>
+          </div>
+          <datalist id="country-options">
+            ${COUNTRY_CODES.map((c) => `<option value="${escapeHtml(flagOf(c) + ' ' + countryName(c))}"></option>`).join('')}
+          </datalist>
+          <input class="profile-input" id="locality-input" placeholder="neighborhood or city (optional)" maxlength="40" style="margin-top:8px"/>
           <textarea class="profile-ta" id="bio-input" placeholder="what you're about (bread, music, debugging…)" maxlength="240"></textarea>
           <div class="panel-label" style="margin-top:14px">TAGS · pick up to 6</div>
           <div class="chip-row" id="profile-tags-row"></div>
@@ -224,16 +233,62 @@ function renderProfileTags() {
 function syncProfileFields() {
   const p = state.profile;
   const dn = document.getElementById('display-name-input');
-  const or = document.getElementById('origin-input');
+  const lo = document.getElementById('locality-input');
   const bi = document.getElementById('bio-input');
   if (dn) dn.value = p?.display_name || '';
-  if (or) or.value = p?.origin || '';
+  if (lo) lo.value = p?.locality || '';
   if (bi) bi.value = p?.bio || '';
+  showCountry(p?.country_code || null);
   // Highlight the saved hair style, not always the first chip.
   document.querySelectorAll('#hair-style .chip').forEach((c) =>
     c.classList.toggle('on', c.dataset.style === state.avatar.hair)
   );
   renderProfileTags();
+}
+
+// Country picker: a native <input list> over all 249 codes. Accepts the
+// "🇵🇰 Pakistan" option text, the plain country name, or the 2-letter code.
+// Returns null for empty, undefined while the text isn't a country yet.
+function codeFromCountryText(text) {
+  const s = text.trim().toLowerCase();
+  if (!s) return null;
+  for (const c of COUNTRY_CODES) {
+    const name = countryName(c).toLowerCase();
+    if (s === name || s === `${flagOf(c)} ${name}` || s === c.toLowerCase()) return c;
+  }
+  return undefined;
+}
+
+function showCountry(code, { setText = true } = {}) {
+  const flag = document.getElementById('country-flag');
+  const input = document.getElementById('country-input');
+  if (flag) flag.textContent = code ? flagOf(code) : '';
+  if (input && setText) input.value = code ? `${flagOf(code)} ${countryName(code)}` : '';
+}
+
+function initOriginFields() {
+  const country = document.getElementById('country-input');
+  const locality = document.getElementById('locality-input');
+  country?.addEventListener('input', (e) => {
+    const code = codeFromCountryText(e.target.value);
+    if (code === undefined) return;            // still typing
+    showCountry(code, { setText: false });
+    debouncedSave({ country_code: code });
+  });
+  country?.addEventListener('change', (e) => {
+    // On blur/enter, snap to the canonical "flag name" text, or back to the
+    // saved country if what was typed isn't one.
+    const code = codeFromCountryText(e.target.value);
+    showCountry(code === undefined ? state.profile?.country_code || null : code);
+  });
+  locality?.addEventListener('input', (e) => {
+    const v = e.target.value.trim();
+    const ok = isValidLocality(v);
+    e.target.style.borderColor = ok ? '' : 'var(--coral)';
+    // Never send a value the DB check would reject: it would fail the whole
+    // merged patch, dropping the other fields' edits too.
+    if (ok) debouncedSave({ locality: v || null });
+  });
 }
 
 function refreshAuthBadge() {
@@ -284,9 +339,7 @@ export function initCreate() {
   document.getElementById('display-name-input')?.addEventListener('input', e =>
     debouncedSave({ display_name: e.target.value.trim() || null })
   );
-  document.getElementById('origin-input')?.addEventListener('input', e =>
-    debouncedSave({ origin: e.target.value.trim() || null })
-  );
+  initOriginFields();
   document.getElementById('bio-input')?.addEventListener('input', e =>
     debouncedSave({ bio: e.target.value.trim() || null })
   );

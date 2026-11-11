@@ -1802,3 +1802,25 @@ body.app-view { transition: padding-right 0.25s ease; }
 .admin-box { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 10px; font-size: 12px; color: var(--muted); width: 100%; }
 .admin-box summary { cursor: pointer; font-family: var(--pixel); letter-spacing: 0.08em; font-size: 13px; }
 .motion-top { gap: 10px; flex-wrap: wrap; }
+
+/* ================================================================
+   EVENTS (real)
+   ================================================================ */
+.ev-form { margin-bottom: 20px; }
+.ev-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.ev-form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); min-width: 0; }
+.ev-form-grid .ev-span { grid-column: 1 / -1; }
+.ev-form-grid input[type="datetime-local"] { color-scheme: dark; }
+:root[data-theme="light"] .ev-form-grid input[type="datetime-local"] { color-scheme: light; }
+.ev-day { margin-bottom: 18px; }
+.ev-day-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 8px; }
+.ev-desc { font-size: 12px; color: var(--body); margin-top: 6px; line-height: 1.4; white-space: pre-line; }
+.ev-by { font-size: 11px; color: var(--dim); margin-top: 6px; }
+.ev-by .fi { margin-right: 4px; }
+.ev-count { font-size: 11px; color: var(--muted); margin-left: 10px; }
+.ev-more { font-size: 10px; color: var(--muted); margin-left: 4px; }
+.ev-rsvp-row { display: flex; gap: 6px; margin-top: 10px; }
+.ev-rsvp-btn.on.maybe { background: var(--butter); border-color: var(--butter); }
+.ev-place { color: var(--mint); text-decoration: none; }
+.ev-past { margin-top: 8px; }
+.ev-past summary { cursor: pointer; list-style: revert; }

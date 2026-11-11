@@ -47,8 +47,9 @@ export async function saveProfile(patch) {
   return data;
 }
 
+// Profiles are only readable when signed in (anon has no access).
 export async function loadAllProfiles() {
-  if (!supabase) { state.profiles = []; return []; }
+  if (!supabase || !state.auth) { state.profiles = []; return []; }
   const { data, error } = await supabase
     .from('profiles').select('*').order('created_at', { ascending: true });
   if (error) { console.error('[profile] loadAll:', error); return []; }
@@ -65,6 +66,16 @@ export function subscribeProfiles(onChange) {
     )
     .subscribe();
   return () => ch.unsubscribe();
+}
+
+// Admin status only decides whether delete buttons show; RLS enforces it.
+export async function loadIsAdmin() {
+  state.isAdmin = false;
+  if (!supabase || !state.auth) return false;
+  const { data, error } = await supabase.rpc('is_admin');
+  if (error) { console.error('[profile] is_admin:', error); return false; }
+  state.isAdmin = data === true;
+  return state.isAdmin;
 }
 
 export const PROFILE_TAGS = ['OPEN', 'DEFENSE', 'MUSICIAN', 'COOKS', 'NEW', 'FRANCOPHONE', 'GUIDE', 'COUNCIL'];

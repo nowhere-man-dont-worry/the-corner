@@ -38,6 +38,7 @@ export const state = {
   // theme
   theme: 'dark',               // 'dark' | 'light'
   auth: null, // { id, github_username, avatar_url } when signed in
+  isAdmin: false,     // from the is_admin() RPC; only gates UI, the DB enforces it
   profile: null,      // this user's own profile row
   profiles: [],       // everyone's profiles for the Members page
 };

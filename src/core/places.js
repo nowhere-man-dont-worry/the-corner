@@ -63,3 +63,40 @@ export async function addPlace(fields, onChange) {
   onChange?.();
   return { error: null };
 }
+
+// Delete your own spot, or any spot as an admin. RLS decides; the UI only
+// shows the button when it should work. Optimistic with rollback.
+export async function deletePlace(id, onChange) {
+  if (!supabase || !state.auth) return { error: new Error('Sign in first.') };
+  const i = places.findIndex((p) => p.id === id);
+  if (i < 0) return { error: null };
+  const [removed] = places.splice(i, 1);
+  onChange?.();
+  const { data, error } = await supabase.from('places').delete().eq('id', id).select('id');
+  if (error || !data?.length) {
+    places.splice(i, 0, removed);
+    onChange?.();
+    return { error: error || new Error('not allowed') };
+  }
+  return { error: null };
+}
+
+// Live adds/deletes from classmates.
+export function subscribePlaces(onChange) {
+  if (!supabase || !state.auth) return;
+  supabase.channel('places-stream')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'places' }, (payload) => {
+      if (places.some((p) => p.id === payload.new.id)) return;
+      places.push(payload.new);
+      onChange?.();
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'places' }, (payload) => {
+      const i = places.findIndex((p) => p.id === payload.old?.id);
+      if (i >= 0) { places.splice(i, 1); onChange?.(); }
+    })
+    .subscribe();
+}
+
+export function canDeletePlace(p) {
+  return !!state.auth && !p.pending && (p.submitted_by === state.auth.id || state.isAdmin);
+}

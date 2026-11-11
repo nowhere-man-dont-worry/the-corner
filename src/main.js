@@ -10,7 +10,7 @@ import { loadTheme, initThemeButtons } from './core/theme.js';
 import { initChat, chatDrawerHTML } from './core/chat.js';
 import { toastHTML } from './core/toast.js';
 import { getSession, onAuthChange } from './core/supabase.js';
-import { ensureProfile, loadAllProfiles, subscribeProfiles } from './core/profile.js';
+import { ensureProfile, loadAllProfiles, subscribeProfiles, loadIsAdmin } from './core/profile.js';
 
 import { landingHTML, initLanding, refreshLandingAuth } from './views/landing.js';
 import { createHTML, initCreate } from './views/create.js';
@@ -39,8 +39,10 @@ async function boot() {
   const session = await getSession();
   hydrateAuth(session);
 
-  await loadAllProfiles();
-  if (state.auth) await ensureProfile();
+  if (state.auth) {
+    await ensureProfile();
+    await Promise.all([loadAllProfiles(), loadIsAdmin()]);
+  }
 
   document.body.innerHTML = `
     <section id="landing" class="view active">${landingHTML}</section>
@@ -71,10 +73,11 @@ async function boot() {
   initChat();
   initThemeButtons();
 
-  subscribeProfiles(() => {
-    // re-render members if visible
-    import('./views/members.js').then(m => m.renderMembers());
-  });
+  if (state.auth) {
+    subscribeProfiles(() => {
+      import('./views/members.js').then(m => m.renderMembers());
+    });
+  }
 
   onAuthChange((session) => {
     const wasSignedIn = !!state.auth;
@@ -83,7 +86,7 @@ async function boot() {
     // so the profile work runs right after this callback returns.
     setTimeout(async () => {
       if (session) await ensureProfile();
-      await loadAllProfiles();
+      await Promise.all([loadAllProfiles(), loadIsAdmin()]);
     }, 0);
     refreshLandingAuth();
     if (!wasSignedIn && session) nav('create');

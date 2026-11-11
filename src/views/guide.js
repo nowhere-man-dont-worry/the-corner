@@ -4,7 +4,7 @@
 import { state } from '../core/state.js';
 import { toast } from '../core/toast.js';
 import { escapeHtml } from '../utils/html.js';
-import { PLACE_CATEGORIES, getPlaces, loadPlaces, addPlace } from '../core/places.js';
+import { PLACE_CATEGORIES, getPlaces, loadPlaces, addPlace, deletePlace, subscribePlaces, canDeletePlace } from '../core/places.js';
 
 export const guideHTML = `
   <div class="guide-grid">
@@ -157,11 +157,20 @@ function renderGuide() {
           <div class="place-h">${escapeHtml(p.name)}</div>
           ${p.address ? `<div class="place-sub">${escapeHtml(p.address)}</div>` : ''}
         </div>
+        ${canDeletePlace(p) ? `<button class="del-btn" data-del-place="${escapeHtml(p.id)}" title="${p.submitted_by === state.auth?.id ? 'Delete your spot' : 'Delete (admin)'}" aria-label="Delete spot">×</button>` : ''}
       </div>
       ${p.tip ? `<div class="place-quote">${escapeHtml(p.tip)}</div>` : ''}
       <div style="font-size:11px;color:var(--dim);margin-top:6px">${escapeHtml(byline(p))}</div>
     </div>`).join('')
     : `<div style="padding:24px 8px;font-size:13px;color:var(--muted);text-align:center;font-style:italic">No spots yet — add the first one.</div>`;
+
+  document.querySelectorAll('[data-del-place]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      if (!confirm('Delete this spot for everyone?')) return;
+      const { error } = await deletePlace(b.dataset.delPlace, renderGuide);
+      if (error) toast(`Couldn't delete that spot: ${error.message}`);
+    })
+  );
 }
 
 // ---- add-a-spot form ----
@@ -226,6 +235,7 @@ export function initGuide() {
 
   renderGuide();
   loadPlaces().then(renderGuide);
+  subscribePlaces(renderGuide);
   // Refresh whenever the guide is opened so new classmate spots show up.
   window.addEventListener('hashchange', () => {
     if (location.hash === '#guide') loadPlaces().then(renderGuide);

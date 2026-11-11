@@ -1734,3 +1734,11 @@ body.app-view { transition: padding-right 0.25s ease; }
   border: 1px dashed var(--border); border-radius: 14px; background: transparent;
 }
 .empty-state .btn { margin-top: 14px; }
+
+/* Delete (own row, or admin) */
+.del-btn {
+  flex: none; width: 22px; height: 22px; display: inline-grid; place-items: center;
+  border: 1px solid transparent; border-radius: 6px; background: transparent;
+  color: var(--dim); font-size: 15px; line-height: 1; cursor: pointer;
+}
+.del-btn:hover { color: var(--coral); border-color: var(--border); background: var(--surface-2); }

@@ -75,6 +75,17 @@ function subscribeChats() {
         if (state.chatOpen && roomForChat() === room) renderChat();
       }
     )
+    .on('postgres_changes',
+      { event: 'DELETE', schema: 'public', table: 'messages' },
+      (payload) => {
+        const id = payload.old?.id;
+        if (id == null) return;
+        for (const room of Object.keys(state.chats)) {
+          const i = state.chats[room].findIndex((m) => m.id === id);
+          if (i >= 0) { state.chats[room].splice(i, 1); if (state.chatOpen && roomForChat() === room) renderChat(); }
+        }
+      }
+    )
     .subscribe();
 }
 
@@ -115,12 +126,13 @@ export async function addChatMsg(room, msg) {
 
   const { data, error } = await supabase
     .from('messages')
+    // user_id, name and created_at are set by the messages_name_trigger
+    // from auth.uid(); the client only sends the room, its look and the text.
     .insert({
       room,
       name: msg.name,
       avatar: msg.avatar,
       text: msg.text,
-      user_id: state.auth.id,
     })
     .select()
     .single();
@@ -134,6 +146,24 @@ export async function addChatMsg(room, msg) {
   }
   if (idx >= 0) state.chats[room][idx] = { ...rowToMsg(data), me: true };
   if (state.chatOpen && roomForChat() === room) renderChat();
+}
+
+// Delete your own message, or any message as an admin (RLS enforces this).
+// Optimistic: removed at once, put back if the delete fails.
+export async function deleteChatMsg(room, id) {
+  if (!supabase || !state.auth) return;
+  const list = state.chats[room] || [];
+  const i = list.findIndex((m) => m.id === id);
+  if (i < 0) return;
+  const [removed] = list.splice(i, 1);
+  if (state.chatOpen && roomForChat() === room) renderChat();
+  const { data, error } = await supabase.from('messages').delete().eq('id', id).select('id');
+  if (error || !data?.length) {
+    list.splice(i, 0, removed);
+    if (state.chatOpen && roomForChat() === room) renderChat();
+    console.error('[chat] delete failed:', error || 'not allowed');
+    import('./toast.js').then((t) => t.toast("Couldn't delete that message."));
+  }
 }
 
 export function toggleChat() {
@@ -173,6 +203,7 @@ export function renderChat() {
         <div class="chat-msg-head">
           ${flagHTML(cc)}<span class="chat-msg-name" title="${escapeHtml(m.name)}">${escapeHtml(m.name)}</span>
           <span class="chat-msg-time">${formatTime(m.ts)}</span>
+          ${(m.me || state.isAdmin) && typeof m.id === 'number' ? `<button class="del-btn" data-del-msg="${m.id}" title="${m.me ? 'Delete your message' : 'Delete (admin)'}" aria-label="Delete message">×</button>` : ''}
         </div>
         <div class="chat-msg-text">${escapeHtml(m.text)}</div>
       </div>
@@ -180,6 +211,9 @@ export function renderChat() {
   `;
   }).join('');
   list.scrollTop = list.scrollHeight;
+  list.querySelectorAll('[data-del-msg]').forEach((b) =>
+    b.addEventListener('click', () => deleteChatMsg(room, +b.dataset.delMsg))
+  );
 }
 
 function sendDrawerChat() {

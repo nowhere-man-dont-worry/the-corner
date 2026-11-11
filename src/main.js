@@ -20,7 +20,11 @@ import { councilHTML, initCouncil } from './views/council.js';
 import { suggestionsHTML, initSuggestions } from './views/suggestions.js';
 import { eventsHTML, initEvents } from './views/events.js';
 import { guideHTML, initGuide } from './views/guide.js';
-import { membersHTML, initMembers } from './views/members.js';
+import { membersHTML, initMembers, renderMembers } from './views/members.js';
+import { gamesHTML, initGames } from './views/games.js';
+import { startPresence, onPresenceChange } from './core/presence.js';
+import { renderChatCount } from './core/chat.js';
+import { renderOnlineChip } from './views/app-shell.js';
 
 function hydrateAuth(session) {
   if (!session) { state.auth = null; return; }
@@ -55,6 +59,7 @@ async function boot() {
       <div class="subview" data-sub="events">${eventsHTML}</div>
       <div class="subview" data-sub="guide">${guideHTML}</div>
       <div class="subview" data-sub="members">${membersHTML}</div>
+      <div class="subview" data-sub="games">${gamesHTML}</div>
     </section>
     ${chatDrawerHTML}
     ${toastHTML}
@@ -69,9 +74,13 @@ async function boot() {
   initEvents();
   initGuide();
   initMembers();
+  initGames();
   initNav();
   initChat();
   initThemeButtons();
+
+  onPresenceChange(() => { renderOnlineChip(); renderChatCount(); renderMembers(); });
+  if (state.auth) startPresence();
 
   if (state.auth) {
     subscribeProfiles(() => {

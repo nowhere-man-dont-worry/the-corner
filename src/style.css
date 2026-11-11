@@ -1742,3 +1742,51 @@ body.app-view { transition: padding-right 0.25s ease; }
   color: var(--dim); font-size: 15px; line-height: 1; cursor: pointer;
 }
 .del-btn:hover { color: var(--coral); border-color: var(--border); background: var(--surface-2); }
+
+/* ================================================================
+   PLAZA — multiplayer + four doors
+   ================================================================ */
+.other-avatar { transition: none; z-index: 3; }
+.other-avatar .npc-label { color: var(--fg); opacity: 0.85; }
+/* Four evenly spaced doors that never overlap, from 390px up. */
+.door.d-cinema, .door.d-game, .door.d-council, .door.d-garden {
+  top: 150px; right: auto; height: 170px;
+  width: min(120px, 20%);
+  transform: translateX(-50%);
+  border-radius: 60px 60px 0 0;
+}
+.door.d-cinema { left: 12.5%; }
+.door.d-game { left: 37.5%; }
+.door.d-council { left: 62.5%; }
+.door.d-garden { left: 87.5%; border: 3px solid var(--lilac); }
+.door.d-garden .door-label { color: var(--lilac); }
+.door.d-cinema:hover, .door.d-game:hover, .door.d-council:hover, .door.d-garden:hover { transform: translateX(-50%) translateY(-3px); }
+.door.soon { opacity: 0.45; filter: saturate(0.4); cursor: default; }
+.door.soon:hover { transform: translateX(-50%); }
+.door.soon .door-count { font-family: var(--pixel); letter-spacing: 0.08em; color: var(--muted); }
+.door-label, .door-count { text-align: center; padding: 0 4px; }
+@media (max-width: 620px) {
+  .door-icon { font-size: 20px; }
+  .door-label { font-size: 11px; }
+  .door-count { font-size: 9px; }
+}
+.door-soon-bubble {
+  position: absolute; z-index: 6; transform: translateX(-50%);
+  padding: 6px 11px; border-radius: 12px; font-size: 12px; white-space: nowrap;
+  background: var(--surface-2); color: var(--fg); border: 1px solid var(--border);
+  opacity: 0; pointer-events: none; transition: opacity 0.15s;
+}
+.door-soon-bubble.show { opacity: 1; }
+
+/* ================================================================
+   GAME ROOM
+   ================================================================ */
+.games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.game-card {
+  text-align: left; padding: 18px; border-radius: 14px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--fg); cursor: pointer; font: inherit;
+}
+.game-card:hover { border-color: var(--butter); }
+.game-card h3 { margin: 0 0 6px; font-size: 16px; }
+.game-card p { margin: 0; font-size: 13px; color: var(--muted); }
+.game-stage { margin-top: 16px; }

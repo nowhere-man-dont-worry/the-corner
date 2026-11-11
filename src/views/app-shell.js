@@ -9,6 +9,16 @@
 import { nav } from '../core/nav.js';
 import { toggleChat } from '../core/chat.js';
 import { themeToggleHTML } from '../core/theme.js';
+import { onlineUserIds } from '../core/presence.js';
+
+// Top-bar "N online" from live presence (hidden until we know).
+export function renderOnlineChip() {
+  const chip = document.getElementById('online-chip');
+  if (!chip) return;
+  const n = onlineUserIds().size;
+  chip.hidden = n === 0;
+  document.getElementById('online-count').textContent = String(n);
+}
 
 export const appNavHTML = `
   <div class="app-nav">

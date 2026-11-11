@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { supabase } from './supabase.js';
+import { retrackPresence } from './presence.js';
 
 function hydrateProfile(p) {
   state.profile = p;
@@ -44,6 +45,7 @@ export async function saveProfile(patch) {
     .from('profiles').update(patch).eq('user_id', state.auth.id).select().single();
   if (error) { console.error('[profile] save:', error); return null; }
   hydrateProfile(data);
+  retrackPresence();
   return data;
 }
 

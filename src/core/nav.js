@@ -4,8 +4,11 @@
 
 import { state } from './state.js';
 import { renderChat, toggleChat } from './chat.js';
+import { setPresenceRoom } from './presence.js';
+import { leaveGames } from '../views/games.js';
 
-export const SUBVIEWS = ['plaza', 'council', 'suggestions', 'events', 'guide', 'members'];
+// 'games' (the Game Room) has no nav tab; the plaza door and #games reach it.
+export const SUBVIEWS = ['plaza', 'council', 'suggestions', 'events', 'guide', 'members', 'games'];
 
 export function nav(view, sub) {
   // Auth gate: anything past landing requires a session.
@@ -13,6 +16,7 @@ export function nav(view, sub) {
     view = 'landing';
     sub = undefined;
   }
+  const prevSub = state.view === 'app' ? state.sub : null;
   state.view = view;
   if (sub) state.sub = sub;
 
@@ -47,6 +51,8 @@ export function nav(view, sub) {
   document.body.classList.toggle('app-view', inApp);
   if (inApp) renderChat();
   if (state.chatOpen && !inApp) toggleChat();
+  if (prevSub === 'games' && !(inApp && state.sub === 'games')) leaveGames();
+  setPresenceRoom(inApp ? state.sub : view);
 }
 
 export function initNav() {

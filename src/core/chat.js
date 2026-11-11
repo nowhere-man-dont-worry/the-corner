@@ -15,6 +15,7 @@ import { formatTime } from '../utils/time.js';
 import { escapeHtml } from '../utils/html.js';
 import { supabase } from './supabase.js';
 import { flagHTML } from './countries.js';
+import { usersInRoom } from './presence.js';
 
 export const ROOM_LABELS = {
   plaza: 'Plaza', council: 'Council', suggestions: 'Suggestions',
@@ -89,8 +90,18 @@ function subscribeChats() {
     .subscribe();
 }
 
+// Chat rooms are the six main rooms; anything else (e.g. the Game Room)
+// talks in the plaza.
 export function roomForChat() {
-  return state.view === 'app' && state.sub ? state.sub : 'plaza';
+  return state.view === 'app' && ROOM_LABELS[state.sub] ? state.sub : 'plaza';
+}
+
+// "N HERE NOW" from live presence.
+export function renderChatCount() {
+  const el = document.getElementById('chat-drawer-count');
+  if (!el) return;
+  const n = state.auth ? usersInRoom(roomForChat()).length : 0;
+  el.textContent = n ? `${n} HERE NOW` : '';
 }
 
 export function makeMyChatMsg(text) {
@@ -184,6 +195,7 @@ export function renderChat() {
 
   document.getElementById('chat-drawer-room').textContent = ROOM_LABELS[room] || 'Chat';
   document.getElementById('chat-drawer-input').placeholder = `say something in ${room}…`;
+  renderChatCount();
   const railLabel = document.getElementById('chat-rail-label');
   if (railLabel) railLabel.textContent = (ROOM_LABELS[room] || 'Chat').toUpperCase() + ' · LIVE';
 

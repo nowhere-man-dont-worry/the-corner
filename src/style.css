@@ -1824,3 +1824,10 @@ body.app-view { transition: padding-right 0.25s ease; }
 .ev-place { color: var(--mint); text-decoration: none; }
 .ev-past { margin-top: 8px; }
 .ev-past summary { cursor: pointer; list-style: revert; }
+
+/* Matcher card (real) */
+.match-card[hidden] { display: none; }
+.match-status { margin-top: 10px; font-size: 13px; color: var(--fg); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.match-status.muted { color: var(--muted); }
+.match-person { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; background: var(--surface-2); max-width: 100%; }
+.match-person .fi { margin: 0; }

@@ -5,6 +5,9 @@ import { avatarSVG } from '../avatars/render.js';
 import { escapeHtml } from '../utils/html.js';
 import { flagHTML, countryName } from '../core/countries.js';
 import { onlineUserIds } from '../core/presence.js';
+import { saveProfile } from '../core/profile.js';
+import { loadMyMatch } from '../core/matcher.js';
+import { toast } from '../core/toast.js';
 
 let filter = 'all';   // 'all' | 'online'
 
@@ -31,6 +34,7 @@ export const membersHTML = `
 
     <div class="page-wrap">
       <div class="mem-grid" id="mem-grid"></div>
+      <div class="match-card" id="match-card"></div>
     </div>
   </div>
 `;
@@ -88,6 +92,55 @@ export function renderMembers() {
   }).join('');
 }
 
+// ---- weekly matcher ----
+let myMatch = null;
+
+function personChip(userId) {
+  const p = (state.profiles || []).find((x) => x.user_id === userId);
+  const name = p?.display_name || (p ? '@' + p.handle : 'a classmate');
+  const look = p ? { hair: p.hair, hairColor: p.hair_color, skin: p.skin, top: p.top, bottom: p.bottom } : {};
+  return `<span class="match-person" title="${escapeHtml(name)}">${avatarSVG(look, 28)}${flagHTML(p?.country_code)}<span class="author-name">${escapeHtml(name)}</span></span>`;
+}
+
+export function renderMatcher() {
+  const card = document.getElementById('match-card');
+  if (!card) return;
+  if (!state.auth) { card.hidden = true; return; }
+  card.hidden = false;
+  const optedIn = !!state.profile?.matcher_opt_in;
+  let status;
+  if (myMatch && myMatch.user_ids.length) {
+    status = `<div class="match-status">This week you're with ${myMatch.user_ids.map(personChip).join('')}</div>`;
+  } else if (!optedIn) {
+    status = `<div class="match-status muted">You're not in the matcher. Opt in and you'll be put in a group of three every Sunday at 18:00 (Paris).</div>`;
+  } else {
+    status = `<div class="match-status muted">You're in. No match yet — the next draw is Sunday at 18:00 (Paris).</div>`;
+  }
+  card.innerHTML = `
+    <div style="min-width:0;flex:1">
+      <div class="page-key" style="color:var(--butter)">◉ CLASSMATE MATCHER · WEEKLY</div>
+      <div style="font-size:14px;color:var(--body);line-height:1.45">Every Sunday everyone who opted in gets shuffled into groups of three for a coffee. Opt out any time.</div>
+      ${status}
+    </div>
+    <button class="match-btn ${optedIn ? 'on' : ''}" data-match role="switch" aria-checked="${optedIn}">${optedIn ? "✓ I'm in" : "I'm in"}</button>`;
+  card.querySelector('[data-match]').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const saved = await saveProfile({ matcher_opt_in: !optedIn });
+    btn.disabled = false;
+    if (!saved) { toast("Couldn't save that — try again."); return; }
+    toast(!optedIn ? "You're in for Sunday's draw." : "You're out of the matcher.");
+    renderMatcher();
+  });
+}
+
+export async function refreshMatcher() {
+  myMatch = await loadMyMatch();
+  renderMatcher();
+}
+
 export function initMembers() {
   renderMembers();
+  renderMatcher();
+  if (state.auth) refreshMatcher();
 }

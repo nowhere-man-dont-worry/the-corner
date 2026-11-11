@@ -1831,3 +1831,22 @@ body.app-view { transition: padding-right 0.25s ease; }
 .match-status.muted { color: var(--muted); }
 .match-person { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; background: var(--surface-2); max-width: 100%; }
 .match-person .fi { margin: 0; }
+
+/* Disabled buttons look disabled */
+.btn:disabled, .btn[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: none; }
+.btn:disabled:hover { transform: none; box-shadow: none; }
+
+/* Toast with a button (e.g. sign-in "Try again") */
+#toast.has-action { pointer-events: auto; display: flex; align-items: center; gap: 10px; }
+.toast-action {
+  border: 1px solid var(--coral); background: transparent; color: var(--coral);
+  border-radius: 999px; padding: 4px 12px; font: inherit; font-weight: 600; cursor: pointer;
+}
+.toast-action:hover { background: rgba(var(--coral-rgb), 0.12); }
+
+/* Members search + chips: wrap instead of clipping, from 390px to 1440px */
+.mem-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+.mem-tools .search { flex: 0 1 260px; min-width: 0; width: auto; }
+.mem-tools .mem-chip-row { margin-bottom: 0; flex: 1 1 320px; min-width: 0; }
+.mem-head-row { min-width: 0; }
+@media (max-width: 620px) { .mem-tools .search { flex-basis: 100%; } }

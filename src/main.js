@@ -8,8 +8,8 @@ import { state } from './core/state.js';
 import { initNav, bootFromHash, nav } from './core/nav.js';
 import { loadTheme, initThemeButtons } from './core/theme.js';
 import { initChat, chatDrawerHTML } from './core/chat.js';
-import { toastHTML } from './core/toast.js';
-import { getSession, onAuthChange } from './core/supabase.js';
+import { toastHTML, toastAction } from './core/toast.js';
+import { getSession, onAuthChange, signInWithGitHub } from './core/supabase.js';
 import { ensureProfile, loadAllProfiles, subscribeProfiles, loadIsAdmin } from './core/profile.js';
 
 import { landingHTML, initLanding, refreshLandingAuth } from './views/landing.js';
@@ -37,7 +37,21 @@ function hydrateAuth(session) {
   state.avatar.name = state.auth.github_username;
 }
 
+// Supabase sends failed OAuth round-trips back as ?error=…&error_description=…
+// (sometimes in the hash). Read it, clean the URL, and offer a retry.
+function takeAuthError() {
+  const q = new URLSearchParams(location.search);
+  const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const desc = q.get('error_description') || h.get('error_description');
+  const code = q.get('error') || h.get('error');
+  if (!desc && !code) return null;
+  const route = h.has('error') ? '#landing' : location.hash;
+  history.replaceState(null, '', location.pathname + route);
+  return (desc || code).replace(/\+/g, ' ');
+}
+
 async function boot() {
+  const authError = takeAuthError();
   loadTheme();
 
   const session = await getSession();
@@ -112,6 +126,9 @@ async function boot() {
   } catch (e) {}
 
   bootFromHash();
+  if (authError) {
+    toastAction(`Sign-in didn't finish: ${authError}.`, 'Try again', signInWithGitHub);
+  }
 }
 
 boot();

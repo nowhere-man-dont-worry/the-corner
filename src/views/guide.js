@@ -54,7 +54,7 @@ export const guideHTML = `
           <circle cx="290" cy="265" r="230" fill="none" stroke="#3d3050" stroke-width="1" stroke-dasharray="2 5" opacity="0.6"/>
           <path d="M 40 290 Q 140 200, 240 240 T 400 250 Q 480 260, 540 220" stroke="#4a90c7" stroke-width="9" fill="none" opacity="0.5" stroke-linecap="round"/>
           <path d="M 40 290 Q 140 200, 240 240 T 400 250 Q 480 260, 540 220" stroke="#6ab4d8" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <g font-family="VT323, monospace" font-size="13" fill="#6b5f7a" letter-spacing="0.08em">
+          <g id="map-arr" font-family="VT323, monospace" font-size="13" fill="#6b5f7a" letter-spacing="0.08em">
             <text x="110" y="180">XVIII</text><text x="360" y="140">XIX</text>
             <text x="440" y="300">XX</text><text x="400" y="420">XII</text>
             <text x="250" y="440">XIII</text><text x="110" y="400">XV</text>
@@ -78,14 +78,31 @@ export const guideHTML = `
   </div>
 `;
 
-// Project lat/long onto the stylised 580×530 map: Paris centre at (290, 265),
-// ~24 px per km, equal scale on both axes. Spots without coordinates get no pin.
+// Project lat/long onto the stylised 580×530 map, equal scale on both axes.
+// The view fits the pins that exist (with padding, and a zoom cap so a single
+// pin doesn't fill the map). With no pins it shows the default Paris view:
+// centre of Paris at (290, 265), ~24 px per km. Spots without coordinates
+// get no pin.
 const PARIS = { lat: 48.8566, long: 2.3522 };
-function project(lat, long) {
-  const dxKm = (long - PARIS.long) * 73.2;   // km per degree of longitude at Paris
-  const dyKm = (lat - PARIS.lat) * 111.2;
+const kmX = (long) => (long - PARIS.long) * 73.2;   // km per degree of longitude at Paris
+const kmY = (lat) => (lat - PARIS.lat) * 111.2;
+const DEFAULT_VIEW = { cx: 0, cy: 0, pxPerKm: 24, isDefault: true };
+
+function viewFor(pins) {
+  if (!pins.length) return DEFAULT_VIEW;
+  const xs = pins.map((p) => kmX(p.long)), ys = pins.map((p) => kmY(p.lat));
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = 70;
+  const fit = Math.min((580 - 2 * pad) / Math.max(maxX - minX, 1e-3), (530 - 2 * pad) / Math.max(maxY - minY, 1e-3));
+  return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, pxPerKm: Math.max(0.05, Math.min(fit, 90)), isDefault: false };
+}
+
+function project(lat, long, view = DEFAULT_VIEW) {
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  return { x: clamp(290 + dxKm * 24, 16, 564), y: clamp(265 - dyKm * 24, 16, 514) };
+  return {
+    x: clamp(290 + (kmX(long) - view.cx) * view.pxPerKm, 16, 564),
+    y: clamp(265 - (kmY(lat) - view.cy) * view.pxPerKm, 16, 514),
+  };
 }
 
 function currentCat() {
@@ -131,10 +148,13 @@ function renderGuide() {
   addBtn.disabled = !state.auth;
   wrap.title = state.auth ? '' : 'sign in to add a spot.';
 
-  document.getElementById('map-pins').innerHTML = all
-    .filter((p) => p.lat != null && p.long != null)
+  const pinned = all.filter((p) => p.lat != null && p.long != null);
+  const view = viewFor(pinned);
+  // Arrondissement labels only line up with the default Paris view.
+  document.getElementById('map-arr')?.setAttribute('opacity', view.isDefault ? '1' : '0');
+  document.getElementById('map-pins').innerHTML = pinned
     .map((p) => {
-      const { x, y } = project(p.lat, p.long);
+      const { x, y } = project(p.lat, p.long, view);
       const on = p.category === key;
       const col = PLACE_CATEGORIES[p.category]?.color || '#9a8ca8';
       return on

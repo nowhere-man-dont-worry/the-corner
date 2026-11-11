@@ -9,7 +9,22 @@ import { saveProfile } from '../core/profile.js';
 import { loadMyMatch } from '../core/matcher.js';
 import { toast } from '../core/toast.js';
 
-let filter = 'all';   // 'all' | 'online'
+let filter = 'all';   // 'all' | 'online' | a profile tag like 'MUSICIAN'
+let query = '';
+
+// Chip labels for the profile tags (the allow-list in prof_tags_allowed).
+const TAG_CHIPS = {
+  OPEN: 'Open to hangs', DEFENSE: 'Defense partners', MUSICIAN: 'Musicians', COOKS: 'Cooks',
+  FRANCOPHONE: 'Francophone', NEW: 'New in Paris', GUIDE: 'Guides', COUNCIL: 'Council',
+};
+
+function matchesQuery(p, q) {
+  if (!q) return true;
+  const hay = [p.display_name, p.handle, p.country_code, p.country_code ? countryName(p.country_code) : '',
+    p.locality, p.bio, ...(p.tags || []), ...(p.tags || []).map((t) => TAG_CHIPS[t] || '')]
+    .filter(Boolean).join(' ').toLowerCase();
+  return q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+}
 
 // "[flag] Pakistan → Vitry-Sur-Seine", "[flag] Pakistan", or "" with no
 // country. Returns HTML: the flag is an image span, the text is escaped.
@@ -29,7 +44,13 @@ export const membersHTML = `
           <h1 class="page-title">Who's in the <span class="accent">corner</span>.</h1>
         </div>
       </div>
-      <div class="mem-chip-row" id="mem-chips" role="group" aria-label="Filter members"></div>
+      <div class="mem-tools">
+        <label class="search" for="mem-search">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="6" cy="6" r="4" stroke="#9a8ca8" stroke-width="1.5"/><path d="M9 9l3 3" stroke="#9a8ca8" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input id="mem-search" type="search" placeholder="name, country, interest…" aria-label="Search members"/>
+        </label>
+        <div class="mem-chip-row" id="mem-chips" role="group" aria-label="Filter members"></div>
+      </div>
     </div>
 
     <div class="page-wrap">
@@ -48,9 +69,13 @@ function renderHeader(profiles, online) {
   const chips = document.getElementById('mem-chips');
   if (!chips) return;
   const onlineCount = profiles.filter((p) => online.has(p.user_id)).length;
+  const tagCounts = {};
+  for (const p of profiles) for (const t of p.tags || []) tagCounts[t] = (tagCounts[t] || 0) + 1;
+  if (TAG_CHIPS[filter] && !tagCounts[filter]) filter = 'all';
   chips.innerHTML = [
     ['all', `All · ${profiles.length}`],
     ['online', `Online now · ${onlineCount}`],
+    ...Object.keys(TAG_CHIPS).filter((t) => tagCounts[t]).map((t) => [t, `${TAG_CHIPS[t]} · ${tagCounts[t]}`]),
   ].map(([k, label]) => `<button class="chip ${filter === k ? 'on' : ''}" data-filter="${k}" aria-pressed="${filter === k}">${label}</button>`).join('');
   chips.querySelectorAll('[data-filter]').forEach((b) =>
     b.addEventListener('click', () => { filter = b.dataset.filter; renderMembers(); })
@@ -63,9 +88,13 @@ export function renderMembers() {
   const all = state.profiles || [];
   const online = onlineUserIds();
   renderHeader(all, online);
-  const profiles = filter === 'online' ? all.filter((p) => online.has(p.user_id)) : all;
+  const profiles = all
+    .filter((p) => filter === 'all' || (filter === 'online' ? online.has(p.user_id) : (p.tags || []).includes(filter)))
+    .filter((p) => matchesQuery(p, query));
   if (all.length && !profiles.length) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">Nobody else is online right now.</div>';
+    const why = query ? `Nobody matches “${escapeHtml(query)}”${filter !== 'all' ? ' with that filter' : ''}.`
+      : filter === 'online' ? 'Nobody else is online right now.' : 'Nobody in that group yet.';
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">${why}</div>`;
     return;
   }
   if (profiles.length === 0) {
@@ -140,6 +169,8 @@ export async function refreshMatcher() {
 }
 
 export function initMembers() {
+  const root = document.querySelector('.subview[data-sub="members"]');
+  root.querySelector('#mem-search').addEventListener('input', (e) => { query = e.target.value.trim(); renderMembers(); });
   renderMembers();
   renderMatcher();
   if (state.auth) refreshMatcher();

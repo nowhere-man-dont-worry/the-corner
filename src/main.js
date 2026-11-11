@@ -1,6 +1,7 @@
 // Entry point. Imports everything, injects the HTML, wires up handlers,
 // and boots the first view based on the URL hash.
 
+import 'flag-icons/css/flag-icons.min.css';
 import './style.css';
 
 import { state } from './core/state.js';

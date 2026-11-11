@@ -14,6 +14,7 @@ import { avatarSVG } from '../avatars/render.js';
 import { formatTime } from '../utils/time.js';
 import { escapeHtml } from '../utils/html.js';
 import { supabase } from './supabase.js';
+import { flagHTML } from './countries.js';
 
 export const ROOM_LABELS = {
   plaza: 'Plaza', council: 'Council', suggestions: 'Suggestions',
@@ -168,18 +169,22 @@ export function renderChat() {
     list.innerHTML = `<div class="chat-empty">nothing in ${room} yet. go first.</div>`;
     return;
   }
-  list.innerHTML = msgs.map((m) => `
+  list.innerHTML = msgs.map((m) => {
+    const uid = m.user_id || (m.me ? state.auth?.id : null);
+    const cc = uid ? state.profiles?.find((p) => p.user_id === uid)?.country_code : null;
+    return `
     <div class="chat-msg ${m.me ? 'me' : ''}">
       ${avatarSVG(m.avatar, 28)}
       <div class="chat-msg-body">
         <div class="chat-msg-head">
-          <span class="chat-msg-name">${escapeHtml(m.name)}</span>
+          ${flagHTML(cc)}<span class="chat-msg-name" title="${escapeHtml(m.name)}">${escapeHtml(m.name)}</span>
           <span class="chat-msg-time">${formatTime(m.ts)}</span>
         </div>
         <div class="chat-msg-text">${escapeHtml(m.text)}</div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
   list.scrollTop = list.scrollHeight;
 }
 

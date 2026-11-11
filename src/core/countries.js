@@ -3,8 +3,8 @@
 // COUNTRY_CODES is the full ISO 3166-1 alpha-2 list (all 249 officially
 // assigned codes) and must stay identical to the prof_country_iso CHECK
 // constraint on profiles.country_code. Only the code is stored; the flag comes
-// from regional-indicator math and the name from Intl.DisplayNames, so there's
-// no name or emoji table to keep in sync.
+// from flag-icons (see flagHTML) and the name from Intl.DisplayNames, so there's
+// no name table to keep in sync.
 
 export const COUNTRY_CODES = [
   'AD','AE','AF','AG','AI','AL','AM','AO','AQ','AR','AS','AT','AU','AW','AX','AZ',
@@ -22,11 +22,19 @@ export const COUNTRY_CODES = [
   'UA','UG','UM','US','UY','UZ','VA','VC','VE','VG','VI','VN','VU','WF','WS','YE','YT','ZA','ZM','ZW',
 ];
 
-// "PK" -> 🇵🇰 : each letter maps to its regional indicator symbol (U+1F1E6 = A).
-export function flagOf(code) {
-  if (typeof code !== 'string' || !/^[A-Z]{2}$/.test(code)) return '';
-  return String.fromCodePoint(0x1F1E6 + code.charCodeAt(0) - 65) +
-         String.fromCodePoint(0x1F1E6 + code.charCodeAt(1) - 65);
+const CODE_SET = new Set(COUNTRY_CODES);
+export function isCountryCode(code) {
+  return typeof code === 'string' && CODE_SET.has(code);
+}
+
+// Flag as an image (flag-icons), not an emoji: Windows has no flag emoji and
+// shows "PK" letters instead. Only codes on the ISO list ever reach the class
+// attribute; anything else renders nothing. The SVG behind each class is a
+// separate file, so the browser only downloads the flags that are on screen.
+export function flagHTML(code) {
+  if (!isCountryCode(code)) return '';
+  const label = countryName(code).replace(/[&<>"']/g, '') + ' flag';
+  return `<span class="fi fi-${code.toLowerCase()}" role="img" aria-label="${label}"></span>`;
 }
 
 let regionNames = null;

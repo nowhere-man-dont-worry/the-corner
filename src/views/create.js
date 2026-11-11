@@ -7,11 +7,11 @@ import { avatarSVG } from '../avatars/render.js';
 import { PALETTE } from '../avatars/palette.js';
 import { hairOrder } from '../avatars/hair/index.js';
 import { themeToggleHTML } from '../core/theme.js';
-import { toast } from '../core/toast.js';
 import { signOut } from '../core/supabase.js';
 import { saveProfile, PROFILE_TAGS } from '../core/profile.js';
-import { COUNTRY_CODES, flagOf, countryName, isValidLocality } from '../core/countries.js';
+import { flagHTML, isValidLocality } from '../core/countries.js';
 import { escapeHtml } from '../utils/html.js';
+import { createCountryCombobox } from '../components/country-combobox.js';
 
 export const createHTML = `
   <div class="create-wrap">
@@ -67,27 +67,12 @@ export const createHTML = `
         <div class="panel">
           <div class="panel-label">YOU</div>
           <input class="profile-input" id="display-name-input" placeholder="your name (e.g. Wasi)" maxlength="60"/>
-          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-            <span id="country-flag" style="font-size:20px;min-width:28px;text-align:center" aria-hidden="true"></span>
-            <input class="profile-input" id="country-input" list="country-options" placeholder="where you're from — type to search" autocomplete="off"/>
-          </div>
-          <datalist id="country-options">
-            ${COUNTRY_CODES.map((c) => `<option value="${escapeHtml(flagOf(c) + ' ' + countryName(c))}"></option>`).join('')}
-          </datalist>
+          <label class="sr-only" for="country-input">Country</label>
+          <div id="country-cbx" style="margin-top:8px"></div>
           <input class="profile-input" id="locality-input" placeholder="neighborhood or city (optional)" maxlength="40" style="margin-top:8px"/>
           <textarea class="profile-ta" id="bio-input" placeholder="what you're about (bread, music, debugging…)" maxlength="240"></textarea>
           <div class="panel-label" style="margin-top:14px">TAGS · pick up to 6</div>
           <div class="chip-row" id="profile-tags-row"></div>
-        </div>
-
-        <div class="panel" style="background:transparent;border-style:dashed">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div class="panel-label" style="margin-bottom:4px">OPTIONAL</div>
-              <div style="font-size:13px;color:#c8bcaf">freckles, glasses, piercing, flag badge — pick anytime later</div>
-            </div>
-            <span style="color:var(--muted);font-size:18px">→</span>
-          </div>
         </div>
 
         <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:8px;gap:12px;flex-wrap:wrap">
@@ -111,16 +96,28 @@ export function renderAvatarPreview() {
   const mini = document.getElementById('me-mini');
   if (mini) mini.innerHTML = avatarSVG(state.avatar, 22);
 
+  const name = state.avatar.name;
   const meAvatar = document.getElementById('me-avatar');
-  if (meAvatar)
+  if (meAvatar) {
+    const bubble = meAvatar.querySelector('.chat-bubble');
     meAvatar.innerHTML =
-      avatarSVG(state.avatar, 60) + `<div class="npc-label">${state.avatar.name}</div>`;
+      avatarSVG(state.avatar, 60) +
+      `<div class="npc-label" title="${escapeHtml(name)}">${flagHTML(state.profile?.country_code)}<span class="lbl-name">${escapeHtml(name)}</span></div>`;
+    if (bubble) meAvatar.prepend(bubble);
+  }
 
   const meName = document.getElementById('me-name');
-  if (meName) meName.textContent = state.avatar.name;
+  if (meName) { meName.textContent = name; meName.title = name; }
 }
 
 function setCreateTab(tab) {
+  // The Flag tab has no swatches: it opens the same country picker as the
+  // YOU panel, so profiles.country_code has a single source of truth.
+  if (tab === 'flag') {
+    document.getElementById('country-cbx')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    countryCbx?.open();
+    return;
+  }
   currentCreateTab = tab;
   document.querySelectorAll('#create-tabs .tab').forEach((t) =>
     t.classList.toggle('on', t.dataset.tab === tab)
@@ -130,23 +127,13 @@ function setCreateTab(tab) {
     top: 'COLOUR · TOP',
     bottom: 'COLOUR · BOTTOM',
     skin: 'COLOUR · SKIN',
-    flag: 'FLAG · pick a country',
   };
   document.getElementById('color-label').textContent = labels[tab] || 'COLOUR';
   renderSwatches();
 }
 
 function renderSwatches() {
-  const key =
-    currentCreateTab === 'hair'
-      ? 'hair'
-      : currentCreateTab === 'top'
-      ? 'top'
-      : currentCreateTab === 'bottom'
-      ? 'bottom'
-      : currentCreateTab === 'skin'
-      ? 'skin'
-      : 'flag';
+  const key = currentCreateTab;
   const current =
     currentCreateTab === 'hair'
       ? state.avatar.hairColor
@@ -161,7 +148,6 @@ function renderSwatches() {
     sw.addEventListener('click', () => {
       const c = sw.dataset.c;
       if (currentCreateTab === 'hair') state.avatar.hairColor = c;
-      else if (currentCreateTab === 'flag') toast('Flag badge saved.');
       else state.avatar[currentCreateTab] = c;
       renderAvatarPreview();
       if (currentCreateTab === 'hair') debouncedSave({ hair_color: c });
@@ -238,7 +224,7 @@ function syncProfileFields() {
   if (dn) dn.value = p?.display_name || '';
   if (lo) lo.value = p?.locality || '';
   if (bi) bi.value = p?.bio || '';
-  showCountry(p?.country_code || null);
+  countryCbx?.setValue(p?.country_code || null);
   // Highlight the saved hair style, not always the first chip.
   document.querySelectorAll('#hair-style .chip').forEach((c) =>
     c.classList.toggle('on', c.dataset.style === state.avatar.hair)
@@ -246,40 +232,18 @@ function syncProfileFields() {
   renderProfileTags();
 }
 
-// Country picker: a native <input list> over all 249 codes. Accepts the
-// "🇵🇰 Pakistan" option text, the plain country name, or the 2-letter code.
-// Returns null for empty, undefined while the text isn't a country yet.
-function codeFromCountryText(text) {
-  const s = text.trim().toLowerCase();
-  if (!s) return null;
-  for (const c of COUNTRY_CODES) {
-    const name = countryName(c).toLowerCase();
-    if (s === name || s === `${flagOf(c)} ${name}` || s === c.toLowerCase()) return c;
-  }
-  return undefined;
-}
-
-function showCountry(code, { setText = true } = {}) {
-  const flag = document.getElementById('country-flag');
-  const input = document.getElementById('country-input');
-  if (flag) flag.textContent = code ? flagOf(code) : '';
-  if (input && setText) input.value = code ? `${flagOf(code)} ${countryName(code)}` : '';
-}
+let countryCbx = null;
 
 function initOriginFields() {
-  const country = document.getElementById('country-input');
   const locality = document.getElementById('locality-input');
-  country?.addEventListener('input', (e) => {
-    const code = codeFromCountryText(e.target.value);
-    if (code === undefined) return;            // still typing
-    showCountry(code, { setText: false });
-    debouncedSave({ country_code: code });
-  });
-  country?.addEventListener('change', (e) => {
-    // On blur/enter, snap to the canonical "flag name" text, or back to the
-    // saved country if what was typed isn't one.
-    const code = codeFromCountryText(e.target.value);
-    showCountry(code === undefined ? state.profile?.country_code || null : code);
+  countryCbx = createCountryCombobox(document.getElementById('country-cbx'), {
+    id: 'country-input',
+    value: state.profile?.country_code || null,
+    onChange: (code) => {
+      if (state.profile) state.profile = { ...state.profile, country_code: code };
+      renderAvatarPreview();
+      debouncedSave({ country_code: code });
+    },
   });
   locality?.addEventListener('input', (e) => {
     const v = e.target.value.trim();

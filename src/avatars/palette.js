@@ -6,5 +6,4 @@ export const PALETTE = {
   skin: ['#f5e2d0','#f5c9a0','#e8b899','#d9a76a','#a06e3e','#6b4a35'],
   top:  ['#c589e8','#7fd4a8','#ff6b4a','#ffd166','#4a90c7','#1a1420','#f2e8d5','#5bbf8a'],
   bottom: ['#241b2e','#1e3a5f','#3d2a1f','#ff6b4a','#1a1420','#5c3a28'],
-  flag: ['#ff6b4a','#7fd4a8','#ffd166','#c589e8','#4a90c7'],
 };

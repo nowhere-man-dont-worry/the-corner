@@ -1790,3 +1790,10 @@ body.app-view { transition: padding-right 0.25s ease; }
 .game-card h3 { margin: 0 0 6px; font-size: 16px; }
 .game-card p { margin: 0; font-size: 13px; color: var(--muted); }
 .game-stage { margin-top: 16px; }
+
+/* Author line used by suggestions, comments, council, events */
+.author-name { display: inline-block; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.sug-meta .fi, .cmt-head .fi, .motion-meta .fi { margin-right: 4px; }
+.sug-form { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.sug-form .profile-input, .sug-form .profile-ta { margin: 0; }
+.sug-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }

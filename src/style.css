@@ -1797,3 +1797,8 @@ body.app-view { transition: padding-right 0.25s ease; }
 .sug-form { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
 .sug-form .profile-input, .sug-form .profile-ta { margin: 0; }
 .sug-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+
+/* Council admin controls (only rendered when is_admin()) */
+.admin-box { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 10px; font-size: 12px; color: var(--muted); width: 100%; }
+.admin-box summary { cursor: pointer; font-family: var(--pixel); letter-spacing: 0.08em; font-size: 13px; }
+.motion-top { gap: 10px; flex-wrap: wrap; }

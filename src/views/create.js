@@ -35,7 +35,7 @@ export const createHTML = `
       <div class="preview-card">
         <div class="mono preview-label" style="color:var(--muted);font-size:15px;letter-spacing:0.12em">◉ PREVIEW</div>
         <div class="preview-stage" id="preview-stage"></div>
-        <input class="preview-name" id="avatar-name" value="noa_from_tel_aviv" placeholder="your handle" maxlength="60"/>
+        <input class="preview-name" id="avatar-name" value="" placeholder="your handle" maxlength="60"/>
         <div class="signed-in-badge" id="avatar-signed-in-badge" hidden></div>
         <button class="preview-shuffle" data-randomize>
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M3 7a4 4 0 1 1 1.17 2.83M3 7L1 9m2-2l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>

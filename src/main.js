@@ -17,7 +17,7 @@ import { createHTML, initCreate } from './views/create.js';
 import { appNavHTML, initAppShell } from './views/app-shell.js';
 import { plazaHTML, initPlaza } from './views/plaza.js';
 import { councilHTML, initCouncil } from './views/council.js';
-import { suggestionsHTML, initSuggestions, loadSugComments } from './views/suggestions.js';
+import { suggestionsHTML, initSuggestions } from './views/suggestions.js';
 import { eventsHTML, initEvents } from './views/events.js';
 import { guideHTML, initGuide } from './views/guide.js';
 import { membersHTML, initMembers } from './views/members.js';
@@ -35,7 +35,6 @@ function hydrateAuth(session) {
 
 async function boot() {
   loadTheme();
-  loadSugComments();
 
   const session = await getSession();
   hydrateAuth(session);

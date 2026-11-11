@@ -20,7 +20,7 @@ export const appNavHTML = `
       <div class="navtabs">
         <button class="navtab on" data-sub="plaza">Plaza</button>
         <button class="navtab" data-sub="council">Council</button>
-        <button class="navtab" data-sub="suggestions">Suggestions <span class="notif">7</span></button>
+        <button class="navtab" data-sub="suggestions">Suggestions <span class="notif" id="sugg-badge" hidden></span></button>
         <button class="navtab" data-sub="events">Events</button>
         <button class="navtab" data-sub="guide">Guide</button>
         <button class="navtab" data-sub="members">Members</button>
@@ -28,10 +28,10 @@ export const appNavHTML = `
     </div>
     <div class="app-nav-r">
       <button class="chat-nav-btn" data-chat-open aria-label="Open chat"><span class="dot"></span>Chat</button>
-      <span class="online-chip mono"><span class="online-dot"></span>14 online</span>
+      <span class="online-chip mono" id="online-chip" hidden><span class="online-dot"></span><span id="online-count"></span> online</span>
       <button class="me-chip" data-back-to-create>
         <span id="me-mini"></span>
-        <span id="me-name">noa</span>
+        <span id="me-name"></span>
       </button>
       ${themeToggleHTML}
     </div>

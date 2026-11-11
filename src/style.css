@@ -1727,3 +1727,10 @@ body.app-view { transition: padding-right 0.25s ease; }
   .me-chip { min-width: 0; }
   #me-name { max-width: 96px; }
 }
+
+/* Shared empty state for every list in the app. */
+.empty-state {
+  padding: 40px 20px; text-align: center; color: var(--muted); font-size: 14px;
+  border: 1px dashed var(--border); border-radius: 14px; background: transparent;
+}
+.empty-state .btn { margin-top: 14px; }

@@ -14,7 +14,7 @@ export const state = {
     skin: '#f5c9a0',
     top: '#c589e8',
     bottom: '#241b2e',
-    name: 'noa',
+    name: '',
   },
 
   // plaza
@@ -28,20 +28,8 @@ export const state = {
     bubbleUntil: 0,
   },
 
-  // council
-  vote: null,                  // 'yes' | 'no' | 'meh'
-
-  // suggestions
-  suggestionUpvotes: {},       // id -> 'up' | 'down' | null
-  sugComments: {},             // id -> [{name, avatar, text, ts, me}]
-  sugExpanded: new Set(),      // suggestion ids whose comment threads are open
-
-  // events
-  rsvps: {},                   // "day-index" -> true
-
-  // guide / members
+  // guide
   guideCat: 'food',
-  matched: false,
 
   // chat
   chats: {},                   // room -> [{name, avatar, text, ts, me}]

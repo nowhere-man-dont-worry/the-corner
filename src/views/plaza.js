@@ -5,8 +5,6 @@
 import { state } from '../core/state.js';
 import { nav } from '../core/nav.js';
 import { avatarSVG } from '../avatars/render.js';
-import { NPCS } from '../data/npcs.js';
-import { MEMBERS } from '../data/members.js';
 import { toast } from '../core/toast.js';
 import { addChatMsg, makeMyChatMsg } from '../core/chat.js';
 
@@ -14,22 +12,8 @@ export const plazaHTML = `
   <div class="plaza-wrap">
     <aside class="plaza-side">
       <div class="sidekey">ROOMS</div>
-      <button class="room-link on"><span class="room-icon">▲</span>Plaza <span class="count">8</span></button>
-      <button class="room-link"><span class="room-icon">🎬</span>Cinema <span class="count">3</span></button>
-      <button class="room-link"><span class="room-icon">🎮</span>Game Room <span class="count">2</span></button>
-      <button class="room-link"><span class="room-icon">🏛</span>Council <span class="count">1</span></button>
-      <button class="room-link"><span class="room-icon">🌙</span>Garden</button>
-
-      <div class="sidekey">THIS WEEK</div>
-      <div class="room-card" style="border-color:var(--border)">
-        <div class="when" style="color:var(--coral)">FRI · 20:30</div>
-        <div class="what">Movie night</div>
-        <div class="where">Voting ends Thu. 9 picked In Bruges.</div>
-      </div>
-      <div class="room-card" style="background:transparent">
-        <div class="when" style="color:var(--muted)">SAT · 15:00</div>
-        <div class="what" style="color:#c8bcaf">Buttes-Chaumont picnic</div>
-      </div>
+      <button class="room-link on" data-room-link="plaza"><span class="room-icon">▲</span>Plaza</button>
+      <button class="room-link" data-room-link="council"><span class="room-icon">🏛</span>Council</button>
     </aside>
 
     <main class="plaza-main">
@@ -38,7 +22,7 @@ export const plazaHTML = `
           <h1 class="plaza-title">The plaza</h1>
           <div class="plaza-sub">Walk around. Say hi. Open a door.</div>
         </div>
-        <div class="plaza-clock">◐ THU 14:08 · PARIS</div>
+        <div class="plaza-clock" id="plaza-clock"></div>
       </div>
 
       <div class="room" id="room" tabindex="0">
@@ -47,12 +31,6 @@ export const plazaHTML = `
           walk into a door to enter it
         </div>
 
-        <div class="poster p1">
-          <span>MOVIE NIGHT</span>
-          <span style="font-size:22px;line-height:0.9">FRI<br/>20:30</span>
-          <span>→ vote</span>
-        </div>
-        <div class="poster p2">GAME JAM<br/>DEC 14-15<br/>48 HRS<br/>BRING<br/>SNACKS</div>
 
         <svg style="position:absolute;top:10px;left:0;right:0;width:100%;height:60px;pointer-events:none" viewBox="0 0 780 60" preserveAspectRatio="none" aria-hidden="true">
           <path d="M0 10 Q 195 55 390 15 T 780 10" stroke="#3d3050" stroke-width="1.5" fill="none"/>
@@ -70,22 +48,22 @@ export const plazaHTML = `
         <button class="door d-cinema" data-door="cinema">
           <div class="door-icon">🎬</div>
           <div class="door-label">CINEMA</div>
-          <div class="door-count">3 inside</div>
+          <div class="door-count"></div>
         </button>
         <button class="door d-council" data-door="council">
           <div class="door-icon">🏛</div>
           <div class="door-label">COUNCIL</div>
-          <div class="door-count">1 vote open</div>
+          <div class="door-count" id="door-council-count"></div>
         </button>
         <button class="door d-game" data-door="game">
           <div class="door-icon">🎮</div>
           <div class="door-label">GAME ROOM</div>
-          <div class="door-count">2 playing</div>
+          <div class="door-count"></div>
         </button>
 
         <div class="floor"></div>
 
-        <div id="npcs"></div>
+        <div id="others"></div>
         <div class="me-avatar" id="me-avatar"></div>
 
         <div class="entering-cue" id="entering-cue">
@@ -104,7 +82,6 @@ export const plazaHTML = `
 // ---- state ----
 const keys = {};
 let lastFrame = 0;
-let npcsLastMove = 0;
 let loopRunning = false;
 
 const DOORS = {
@@ -115,55 +92,6 @@ const DOORS = {
 const ENTER_HOLD_MS = 1200;
 let hoverDoor = null;
 let hoverElapsed = 0;
-
-// ---- NPC rendering ----
-function renderNPCs() {
-  const wrap = document.getElementById('npcs');
-  if (!wrap) return;
-  wrap.innerHTML = NPCS.map(
-    (n, i) => `
-    <div class="npc" id="npc-${i}" style="left:${n.x}px;bottom:${600 - n.y}px">
-      ${n.showBubble ? `<div class="chat-bubble">${n.line}</div>` : ''}
-      ${avatarSVG({ hair: 'mop', hairColor: n.hair, skin: n.skin, top: n.top, bottom: n.bottom }, 56)}
-      <div class="npc-label">${n.name}</div>
-    </div>`
-  ).join('');
-}
-
-function updateNPCs(ts) {
-  if (ts - npcsLastMove < 2500) return;
-  npcsLastMove = ts;
-  NPCS.forEach((n) => {
-    if (Math.random() < 0.45) {
-      n.x = Math.max(80, Math.min(680, n.x + (Math.random() * 80 - 40)));
-      n.y = Math.max(440, Math.min(560, n.y + (Math.random() * 30 - 15)));
-    }
-    if (Math.random() < 0.25) {
-      n.showBubble = true;
-      setTimeout(() => {
-        n.showBubble = false;
-        renderNPCs();
-      }, 3500);
-    }
-  });
-  renderNPCs();
-}
-
-// ---- Who's here side panel (kept mountable; hidden by default via CSS) ----
-export function renderWhoList() {
-  const el = document.getElementById('who-list');
-  if (!el) return;
-  el.innerHTML =
-    MEMBERS.map(
-      (m) => `
-    <div class="who">
-      <span class="who-dot ${m.online ? '' : 'away'}"></span>
-      ${avatarSVG({ hair: 'mop', hairColor: m.hair, skin: m.skin, top: m.top, bottom: m.bottom }, 22)}
-      <div>${m.name}</div>
-      ${m.me ? '<div class="who-sub">you</div>' : (!m.online ? `<div class="who-sub">· ${m.name === 'priya' ? 'cinema' : 'game room'}</div>` : '')}
-    </div>`
-    ).join('') + '<div style="padding:7px 9px;font-size:12px;color:var(--dim);cursor:pointer">+ 6 more</div>';
-}
 
 // ---- The player ----
 function updateMe(dt) {
@@ -272,7 +200,6 @@ function loop(ts) {
   if (state.sub === 'plaza') {
     updateMe(dt);
     checkDoorHover(dt);
-    updateNPCs(ts);
     if (state.plaza.bubble && ts > state.plaza.bubbleUntil) {
       state.plaza.bubble = null;
       const b = document.querySelector('#me-avatar .chat-bubble');
@@ -297,10 +224,7 @@ export function showMyBubble(text) {
 }
 
 function sayHi() {
-  const lines = ['hi!', 'wya', 'bored :(', 'anyone up?', 'oi', '...', 'coffee?'];
-  const l = lines[Math.floor(Math.random() * lines.length)];
-  showMyBubble(l);
-  addChatMsg('plaza', makeMyChatMsg(l));
+  showMyBubble('hi!');
 }
 
 function sendPlazaChat() {
@@ -326,6 +250,14 @@ function handleKeyDown(e) {
 }
 function handleKeyUp(e) {
   keys[e.key] = false;
+}
+
+// Real Paris time, not a frozen label.
+function tickClock() {
+  const el = document.getElementById('plaza-clock');
+  if (!el) return;
+  const t = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date());
+  el.textContent = '◐ ' + t.toUpperCase().replace(',', '') + ' · PARIS';
 }
 
 // ---- Init ----
@@ -354,8 +286,11 @@ export function initPlaza() {
     window.__plazaKeysBound = true;
   }
 
-  renderNPCs();
-  renderWhoList();
+  root.querySelectorAll('[data-room-link]').forEach((b) =>
+    b.addEventListener('click', () => nav(b.dataset.roomLink))
+  );
+  tickClock();
+  setInterval(tickClock, 15000);
 
   if (!loopRunning) {
     loopRunning = true;

@@ -16,14 +16,6 @@ export const guideHTML = `
       <div class="page-key">CATEGORIES</div>
       <div id="cat-list" style="display:flex;flex-direction:column;gap:3px"></div>
 
-      <div class="page-key" style="margin-top:22px">SURVIVAL BASICS</div>
-      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
-        <div style="color:#c8bcaf;cursor:pointer">◉ Navigo pass — set-up</div>
-        <div style="color:#c8bcaf;cursor:pointer">◉ SIM card without a bank</div>
-        <div style="color:#c8bcaf;cursor:pointer">◉ Opening a Revolut / N26</div>
-        <div style="color:#c8bcaf;cursor:pointer">◉ CAF housing aid, step by step</div>
-        <div style="color:#c8bcaf;cursor:pointer">◉ Doctolib in English</div>
-      </div>
     </aside>
 
     <main class="guide-mid">
@@ -169,7 +161,7 @@ function renderGuide() {
       ${p.tip ? `<div class="place-quote">${escapeHtml(p.tip)}</div>` : ''}
       <div style="font-size:11px;color:var(--dim);margin-top:6px">${escapeHtml(byline(p))}</div>
     </div>`).join('')
-    : `<div style="padding:24px 8px;font-size:13px;color:var(--muted);text-align:center;font-style:italic">nothing here yet. add the first spot.</div>`;
+    : `<div style="padding:24px 8px;font-size:13px;color:var(--muted);text-align:center;font-style:italic">No spots yet — add the first one.</div>`;
 }
 
 // ---- add-a-spot form ----

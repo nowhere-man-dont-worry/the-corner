@@ -20,11 +20,6 @@ export const ROOM_LABELS = {
   plaza: 'Plaza', council: 'Council', suggestions: 'Suggestions',
   events: 'Events', guide: 'Guide', members: 'Members',
 };
-export const ROOM_COUNTS = {
-  plaza: '14 here now', council: '4 posting · motion open',
-  suggestions: '27 following', events: '11 this week',
-  guide: '9 contributors', members: '28 of us, 14 online',
-};
 
 function emptyRooms() {
   return { plaza: [], council: [], suggestions: [], events: [], guide: [], members: [] };
@@ -158,7 +153,6 @@ export function renderChat() {
   if (!state.chats[room]) state.chats[room] = [];
 
   document.getElementById('chat-drawer-room').textContent = ROOM_LABELS[room] || 'Chat';
-  document.getElementById('chat-drawer-count').textContent = (ROOM_COUNTS[room] || '').toUpperCase();
   document.getElementById('chat-drawer-input').placeholder = `say something in ${room}…`;
   const railLabel = document.getElementById('chat-rail-label');
   if (railLabel) railLabel.textContent = (ROOM_LABELS[room] || 'Chat').toUpperCase() + ' · LIVE';
@@ -166,7 +160,7 @@ export function renderChat() {
   const list = document.getElementById('chat-drawer-list');
   const msgs = state.chats[room];
   if (!msgs.length) {
-    list.innerHTML = `<div class="chat-empty">nothing in ${room} yet. go first.</div>`;
+    list.innerHTML = `<div class="chat-empty">No messages in ${ROOM_LABELS[room] || room} yet — say the first thing.</div>`;
     return;
   }
   list.innerHTML = msgs.map((m) => {
@@ -213,7 +207,7 @@ export const chatDrawerHTML = `
       <div class="chat-drawer-head">
         <div>
           <div class="chat-drawer-room" id="chat-drawer-room">Plaza</div>
-          <div class="chat-drawer-count" id="chat-drawer-count">14 HERE NOW</div>
+          <div class="chat-drawer-count" id="chat-drawer-count"></div>
         </div>
         <button class="chat-drawer-close" data-chat-close aria-label="Close">×</button>
       </div>

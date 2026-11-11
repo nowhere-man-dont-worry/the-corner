@@ -40,7 +40,7 @@ export const state = {
   rsvps: {},                   // "day-index" -> true
 
   // guide / members
-  guideCat: 'eat',
+  guideCat: 'food',
   matched: false,
 
   // chat

@@ -1855,3 +1855,13 @@ body.app-view { transition: padding-right 0.25s ease; }
    their labels on short windows. */
 .room .floor { top: 320px; height: auto; bottom: 0; }
 .ev-rsvp-row .ev-rsvp-btn { margin-left: 0; }
+
+/* "Coming soon" doors: still clearly dimmed (dashed muted frame, faded grey
+   icon), but the door itself stays opaque so its text keeps WCAG AA contrast
+   against the door background (var(--bg), a step darker/quieter than the
+   live doors) in both themes: COMING SOON uses --body (9.7:1 dark, 9.6:1
+   light), the name --muted (5.7:1 dark, 5.8:1 light). */
+.door.soon { opacity: 1; filter: none; background: var(--bg); border-style: dashed; border-color: var(--border) !important; }
+.door.soon .door-icon { opacity: 0.35; filter: grayscale(1); }
+.door.soon .door-label { color: var(--muted) !important; }
+.door.soon .door-count { color: var(--body); font-weight: 600; }

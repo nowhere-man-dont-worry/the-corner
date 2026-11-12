@@ -1998,43 +1998,40 @@ body.app-view { transition: padding-right 0.25s ease; }
 
 /* ================================================================
    LIGHT MODE — coral action buttons with white labels.
+   COLOURS ONLY. A theme never changes size or layout: font-size,
+   weight, padding, height, line-height and border width for these
+   buttons live in their base rules above, shared by both themes.
    The light theme darkens --butter to #a77a14 so yellow *text* stays
    readable on cream; as a button *fill* it reads as brown, so these
-   buttons use the site's coral family instead.
-   White labels are WCAG "large text" (19px = 14pt, bold), which needs
-   3:1. Hover and pressed get slightly darker, so the white label gains
-   contrast. Light theme only: every selector is scoped to
-   :root[data-theme="light"], so dark mode is unchanged.
+   buttons use the coral family. Every fill below carries white text at
+   >= 4.5:1 at the buttons' normal size. Hover and pressed are slightly
+   darker. Scoped to :root[data-theme="light"]: dark mode is unchanged.
    ================================================================ */
 :root[data-theme="light"] {
-  --cta-coral: #d9553a;        /* white 3.95:1 — the light --coral, unchanged */
-  --cta-coral-hover: #c84a30;  /* white 4.69:1 */
-  --cta-coral-press: #b8432b;  /* white 5.42:1 */
-  --cta-orange: #e46f1f;       /* bright warm orange end of the bored gradient: white 3.19:1 */
-  --cta-orange-hover: #d4661d; /* white 3.67:1 */
-  --cta-orange-press: #c95f17; /* white 4.09:1 */
-  --cta-green: #3fa06c;        /* the light --mint: white 3.25:1 */
-  --cta-green-hover: #368f5f;  /* white 4.00:1 */
-  --cta-green-press: #2f8253;  /* white 4.73:1 */
+  --cta-coral: #d24427;        /* brightest coral with white >= 4.5: 4.57:1 */
+  --cta-coral-hover: #c73e23;  /* 5.07:1 */
+  --cta-coral-press: #bc3a20;  /* 5.58:1 */
+  --cta-orange: #c9500b;       /* brightest orange with white >= 4.5: 4.53:1 */
+  --cta-orange-hover: #bd4b0a; /* 5.03:1 */
+  --cta-orange-press: #b24609; /* 5.57:1 */
+  --cta-green: #348558;        /* the light --mint darkened just to 4.52:1 */
+  --cta-green-hover: #307d53;
+  --cta-green-press: #2c754d;
   --cta-text: #ffffff;
-  --cta-shadow: rgba(217, 85, 58, 0.22);
+  --cta-shadow: rgba(210, 68, 39, 0.22);
   --rsvp-maybe: #b8432b;       /* coral outline text: 5.42:1 on white */
   --butter-text: #86610f;      /* small yellow text: >= 4.77:1 on every light surface */
 }
 
-/* Primary buttons (landing "Sign in with GitHub" / "Step inside", avatar
-   "enter", reaction "Start run"). Buttons with inline sizes are the small
-   form buttons and keep their size. */
-:root[data-theme="light"] .btn-primary:not([style]) {
-  font-size: 19px; font-weight: 700; padding: 11px 22px; line-height: 1.25;
-  background: var(--cta-coral); color: var(--cta-text);
-}
-:root[data-theme="light"] .btn-primary:not([style]):hover { background: var(--cta-coral-hover); }
-:root[data-theme="light"] .btn-primary:not([style]):active { background: var(--cta-coral-press); transform: translateY(1px); }
+/* Primary coral buttons — the landing "Sign in with GitHub" / "Step
+   inside", avatar "enter", "Start run" and the small form buttons
+   ("Raise it", "Create event", "+ Add a spot", "add spot", "Drop it"). */
+:root[data-theme="light"] .btn-primary { background: var(--cta-coral); color: var(--cta-text); box-shadow: 0 8px 22px var(--cta-shadow); }
+:root[data-theme="light"] .btn-primary:hover { background: var(--cta-coral-hover); box-shadow: 0 12px 30px rgba(210, 68, 39, 0.3); }
+:root[data-theme="light"] .btn-primary:active { background: var(--cta-coral-press); }
 
-/* Events — "I'm bored": coral → warm orange, coral-tinted shadow. */
+/* Events — "I'm bored": coral → orange. */
 :root[data-theme="light"] .bored-btn {
-  font-size: 19px; padding: 11px 22px; line-height: 1.25;
   background: linear-gradient(135deg, var(--cta-coral) 0%, var(--cta-orange) 100%);
   color: var(--cta-text);
   box-shadow: 0 8px 22px var(--cta-shadow);
@@ -2042,37 +2039,33 @@ body.app-view { transition: padding-right 0.25s ease; }
 :root[data-theme="light"] .bored-btn svg * { stroke: currentColor; }
 :root[data-theme="light"] .bored-btn:hover {
   background: linear-gradient(135deg, var(--cta-coral-hover) 0%, var(--cta-orange-hover) 100%);
-  box-shadow: 0 12px 28px rgba(217, 85, 58, 0.32);
+  box-shadow: 0 12px 28px rgba(210, 68, 39, 0.32);
 }
 :root[data-theme="light"] .bored-btn:active {
   background: linear-gradient(135deg, var(--cta-coral-press) 0%, var(--cta-orange-press) 100%);
-  transform: translateY(1px); box-shadow: 0 3px 10px var(--cta-shadow);
+  box-shadow: 0 3px 10px var(--cta-shadow);
 }
-:root[data-theme="light"] .bored-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
-/* Events — RSVP. Rest "going" = coral; RSVP'd "✓ going" = filled green;
-   RSVP'd "✓ maybe" = coral outline; rest "maybe" = quiet outline. Both
-   buttons in the row share the large label size so the row stays even. */
-:root[data-theme="light"] .ev-rsvp-btn { font-size: 19px; font-weight: 700; line-height: 1.15; padding: 3px 11px; border-radius: 9px; }
+/* Events — RSVP. Rest "going" = coral; "✓ going" = green; "✓ maybe" =
+   coral outline; rest "maybe" = the quiet outline it already is. */
 :root[data-theme="light"] .ev-rsvp-btn[data-rsvp="going"]:not(.on) { background: var(--cta-coral); border-color: var(--cta-coral); color: var(--cta-text); }
 :root[data-theme="light"] .ev-rsvp-btn[data-rsvp="going"]:not(.on):hover { background: var(--cta-coral-hover); border-color: var(--cta-coral-hover); color: var(--cta-text); }
-:root[data-theme="light"] .ev-rsvp-btn[data-rsvp="going"]:not(.on):active { background: var(--cta-coral-press); border-color: var(--cta-coral-press); transform: translateY(1px); }
+:root[data-theme="light"] .ev-rsvp-btn[data-rsvp="going"]:not(.on):active { background: var(--cta-coral-press); border-color: var(--cta-coral-press); }
 :root[data-theme="light"] .ev-rsvp-btn.on { background: var(--cta-green); border-color: var(--cta-green); color: var(--cta-text); }
 :root[data-theme="light"] .ev-rsvp-btn.on:hover { background: var(--cta-green-hover); border-color: var(--cta-green-hover); color: var(--cta-text); }
-:root[data-theme="light"] .ev-rsvp-btn.on:active { background: var(--cta-green-press); border-color: var(--cta-green-press); transform: translateY(1px); }
-:root[data-theme="light"] .ev-rsvp-btn.on.maybe { background: #ffffff; border: 1.5px solid var(--rsvp-maybe); color: var(--rsvp-maybe); }
+:root[data-theme="light"] .ev-rsvp-btn.on:active { background: var(--cta-green-press); border-color: var(--cta-green-press); }
+:root[data-theme="light"] .ev-rsvp-btn.on.maybe { background: #ffffff; border-color: var(--rsvp-maybe); color: var(--rsvp-maybe); }
 :root[data-theme="light"] .ev-rsvp-btn.on.maybe:hover { background: #fbe9e4; border-color: var(--rsvp-maybe); color: var(--rsvp-maybe); }
-:root[data-theme="light"] .ev-rsvp-btn.on.maybe:active { background: #fbe9e4; box-shadow: inset 0 0 0 1px var(--rsvp-maybe); transform: translateY(1px); }
-:root[data-theme="light"] .ev-rsvp-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+:root[data-theme="light"] .ev-rsvp-btn.on.maybe:active { background: #fbe9e4; border-color: var(--rsvp-maybe); color: var(--rsvp-maybe); box-shadow: inset 0 0 0 1px var(--rsvp-maybe); }
 
-/* Members — matcher "I'm in": coral; "✓ I'm in": filled green. */
-:root[data-theme="light"] .match-btn { font-size: 19px; padding: 8px 20px; line-height: 1.25; background: var(--cta-coral); color: var(--cta-text); box-shadow: 0 8px 22px var(--cta-shadow); }
+/* Members — matcher "I'm in" = coral; "✓ I'm in" = green. */
+:root[data-theme="light"] .match-btn { background: var(--cta-coral); color: var(--cta-text); box-shadow: 0 8px 22px var(--cta-shadow); }
 :root[data-theme="light"] .match-btn:hover { background: var(--cta-coral-hover); }
-:root[data-theme="light"] .match-btn:active { background: var(--cta-coral-press); transform: translateY(1px); box-shadow: 0 3px 10px var(--cta-shadow); }
+:root[data-theme="light"] .match-btn:active { background: var(--cta-coral-press); box-shadow: 0 3px 10px var(--cta-shadow); }
 :root[data-theme="light"] .match-btn.on { background: var(--cta-green); color: var(--cta-text); box-shadow: none; }
 :root[data-theme="light"] .match-btn.on:hover { background: var(--cta-green-hover); }
 :root[data-theme="light"] .match-btn.on:active { background: var(--cta-green-press); }
-:root[data-theme="light"] .match-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+:root[data-theme="light"] .match-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
 /* Small yellow text: darker in light mode so it reads at >= 4.5:1.
    Text colour only; backgrounds, borders and dots keep --butter. */

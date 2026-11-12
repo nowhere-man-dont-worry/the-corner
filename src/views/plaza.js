@@ -18,6 +18,8 @@ import { addChatMsg, makeMyChatMsg } from '../core/chat.js';
 import { flagHTML } from '../core/countries.js';
 import { escapeHtml } from '../utils/html.js';
 import { usersInRoom, onPresenceChange, onPlazaEvent, sendPlaza } from '../core/presence.js';
+import { leaderboard, onScoresChange } from '../core/game-scores.js';
+import { nameOf } from '../core/people.js';
 
 export const plazaHTML = `
   <div class="plaza-wrap">
@@ -65,6 +67,7 @@ export const plazaHTML = `
           <div class="door-icon">🎮</div>
           <div class="door-label">GAME ROOM</div>
           <div class="door-count" id="door-game-count"></div>
+          <div class="door-top" id="door-game-top"></div>
         </button>
         <button class="door d-council" data-door="council">
           <div class="door-icon">🏛</div>
@@ -427,6 +430,15 @@ function renderRoomCounts() {
   if (gameCount) gameCount.textContent = g ? `${g} playing` : '';
 }
 
+// "Top: Name · 213 ms" — this week's #1 in the reaction game, or nothing.
+async function renderGameTop() {
+  const el = document.getElementById('door-game-top');
+  if (!el || !state.auth) return;
+  const [top] = await leaderboard('reaction', 'week');
+  el.textContent = top ? `Top: ${nameOf(top.user_id)} · ${Math.round(top.score)} ms` : '';
+  el.title = el.textContent;
+}
+
 // ---- Init ----
 export function initPlaza() {
   const root = document.querySelector('.subview[data-sub="plaza"]');
@@ -473,6 +485,10 @@ export function initPlaza() {
 
   tickClock();
   setInterval(tickClock, 15000);
+  if (state.auth) {
+    renderGameTop();
+    onScoresChange(() => renderGameTop());
+  }
 
   if (!loopRunning) {
     loopRunning = true;

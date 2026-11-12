@@ -52,8 +52,11 @@ function play(id) {
   mounted = game;
 }
 
+// Leaving the Game Room unmounts the game (listeners, timers) and resets the
+// room to the game list, so coming back never shows a dead game screen.
 export function leaveGames() {
-  if (mounted) { mounted.unmount?.(); mounted = null; }
+  if (document.getElementById('games-grid')) showList();
+  else if (mounted) { mounted.unmount?.(); mounted = null; }
 }
 
 export function initGames() {

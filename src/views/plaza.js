@@ -18,6 +18,7 @@ import { addChatMsg, makeMyChatMsg } from '../core/chat.js';
 import { flagHTML } from '../core/countries.js';
 import { escapeHtml } from '../utils/html.js';
 import { usersInRoom, onPresenceChange, onPlazaEvent, sendPlaza } from '../core/presence.js';
+import { stringLightsHTML } from '../core/string-lights.js';
 import { leaderboard, onScoresChange } from '../core/game-scores.js';
 import { nameOf } from '../core/people.js';
 
@@ -45,18 +46,7 @@ export const plazaHTML = `
           walk into a door to enter it
         </div>
 
-        <svg style="position:absolute;top:10px;left:0;right:0;width:100%;height:60px;pointer-events:none" viewBox="0 0 780 60" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0 10 Q 195 55 390 15 T 780 10" stroke="#3d3050" stroke-width="1.5" fill="none"/>
-          <circle class="light" cx="60" cy="33" r="4" fill="#ffd166"/>
-          <circle class="light" cx="140" cy="43" r="4" fill="#ff6b4a"/>
-          <circle class="light" cx="220" cy="46" r="4" fill="#7fd4a8"/>
-          <circle class="light" cx="300" cy="40" r="4" fill="#c589e8"/>
-          <circle class="light" cx="380" cy="30" r="4" fill="#ffd166"/>
-          <circle class="light" cx="460" cy="25" r="4" fill="#ff6b4a"/>
-          <circle class="light" cx="540" cy="23" r="4" fill="#7fd4a8"/>
-          <circle class="light" cx="620" cy="21" r="4" fill="#c589e8"/>
-          <circle class="light" cx="700" cy="17" r="4" fill="#ffd166"/>
-        </svg>
+        ${stringLightsHTML({ colors: ['#ffd166', '#ff6b4a', '#7fd4a8', '#c589e8', '#ffd166', '#ff6b4a', '#7fd4a8', '#c589e8', '#ffd166'], r: 4, style: 'top:10px' })}
 
         <button class="door d-cinema soon" data-door="cinema" aria-disabled="true">
           <div class="door-icon">🎬</div>

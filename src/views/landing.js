@@ -13,6 +13,7 @@ import { nav } from '../core/nav.js';
 import { themeToggleHTML } from '../core/theme.js';
 import { state } from '../core/state.js';
 import { signInWithGitHub } from '../core/supabase.js';
+import { stringLightsHTML } from '../core/string-lights.js';
 
 const LINES = {
   l: [
@@ -52,20 +53,7 @@ export const landingHTML = `
     </div>
   </div>
 
-  <svg class="lights" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M0 10 Q 300 55 600 15 T 1200 10" stroke="#3d3050" stroke-width="1.5" fill="none"/>
-    <circle class="light" cx="100" cy="33" r="5" fill="#ffd166"/>
-    <circle class="light" cx="200" cy="43" r="5" fill="#ff6b4a"/>
-    <circle class="light" cx="300" cy="46" r="5" fill="#7fd4a8"/>
-    <circle class="light" cx="400" cy="40" r="5" fill="#c589e8"/>
-    <circle class="light" cx="500" cy="33" r="5" fill="#ffd166"/>
-    <circle class="light" cx="600" cy="25" r="5" fill="#ff6b4a"/>
-    <circle class="light" cx="700" cy="22" r="5" fill="#7fd4a8"/>
-    <circle class="light" cx="800" cy="20" r="5" fill="#c589e8"/>
-    <circle class="light" cx="900" cy="18" r="5" fill="#ffd166"/>
-    <circle class="light" cx="1000" cy="17" r="5" fill="#ff6b4a"/>
-    <circle class="light" cx="1100" cy="15" r="5" fill="#7fd4a8"/>
-  </svg>
+  ${stringLightsHTML({ colors: ['#ffd166', '#ff6b4a', '#7fd4a8', '#c589e8', '#ffd166', '#ff6b4a', '#7fd4a8', '#c589e8', '#ffd166', '#ff6b4a', '#7fd4a8'], r: 5, className: 'lights' })}
 
   <div class="landing-main">
     <div class="eyebrow">※ AN UNOFFICIAL CLASS SPACE ※</div>

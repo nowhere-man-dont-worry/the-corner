@@ -1,118 +1,168 @@
-// Live presence: one private Supabase Realtime channel per room.
+// Live presence and plaza broadcasts on per-user topics.
 //
-//  - Every signed-in tab listens to all six room channels, so site-wide
-//    counts ("N online") are real, but it only *tracks* itself in the channel
-//    of the room it is in. Views that aren't one of the six rooms (the avatar
-//    creator, the game room) track in the plaza channel with their own `room`
-//    value, so they count as online without standing in the plaza.
-//  - The plaza channel also carries broadcasts: `pos` (avatar position) and
-//    `say` (speech bubbles).
-//  - Presence is keyed by user id, so several tabs of one person count once.
+// Every signed-in user owns one private Realtime topic, user:<their id>.
+// The database lets only that user send on it (migration 0009), so whatever
+// arrives on user:X really came from X. Receivers take the sender's id from
+// the topic name and ignore any id inside the payload.
 //
-// Channels are private (see supabase/migrations/0004_realtime_rooms.sql):
-// only signed-in users can join them.
+// On their own topic, each tab broadcasts:
+//   here { room }      — a heartbeat every few seconds (and on every room
+//                        change): "I'm online and in this room"
+//   bye                — when the tab is closed or hidden for good
+//   pos  { nx, ny, dir, walking }   — plaza position (see views/plaza.js)
+//   say  { text }                   — plaza speech bubble
+//
+// Each tab subscribes to the topic of every member in `profiles` (the class
+// is small). Someone counts as online while their heartbeats keep arriving.
+// Names, looks and flags come from the profiles table, never from a message.
 
 import { state } from './state.js';
 import { supabase } from './supabase.js';
 
 export const ROOMS = ['plaza', 'council', 'suggestions', 'events', 'guide', 'members'];
 
-const channels = {};                 // room -> RealtimeChannel
-const roomState = {};                // room -> Map(user_id -> meta)
-let currentRoom = null;              // what this tab is looking at
-const listeners = new Set();
-const broadcastHandlers = {};        // 'pos' | 'say' | 'join' -> fn
+const HEARTBEAT_MS = 8000;
+const STALE_MS = 20000;            // no heartbeat for this long = offline
 
-const channelFor = (room) => (ROOMS.includes(room) ? room : 'plaza');
+const topicOf = (id) => 'user:' + id;
+const channels = new Map();        // user id -> RealtimeChannel
+const seen = new Map();            // other user id -> { room, at }
+let currentRoom = null;
+let started = false;
+const listeners = new Set();
+const handlers = {};               // 'pos' | 'say' | 'join' -> fn
 
 export function onPresenceChange(fn) { listeners.add(fn); }
-export function onPlazaEvent(event, fn) { broadcastHandlers[event] = fn; }
+export function onPlazaEvent(event, fn) { handlers[event] = fn; }
 function emit() {
   for (const fn of listeners) { try { fn(); } catch (e) { console.error('[presence] listener', e); } }
 }
 
-function myMeta(room) {
-  const p = state.profile || {};
+function me() { return state.auth?.id; }
+function myChannel() { return channels.get(me()); }
+function profileOf(id) { return (state.profiles || []).find((p) => p.user_id === id) || null; }
+
+// Presence "meta" for a user, built from trusted data only.
+function metaFor(id, room) {
+  const p = profileOf(id) || {};
+  const self = id === me();
   return {
-    user_id: state.auth.id,
-    handle: state.auth.github_username,
+    user_id: id,
+    handle: p.handle || (self ? state.auth.github_username : null),
     display_name: p.display_name || null,
     country_code: p.country_code || null,
-    hair: state.avatar.hair,
-    hair_color: state.avatar.hairColor,
-    skin: state.avatar.skin,
-    top: state.avatar.top,
-    bottom: state.avatar.bottom,
+    hair: self ? state.avatar.hair : p.hair,
+    hair_color: self ? state.avatar.hairColor : p.hair_color,
+    skin: self ? state.avatar.skin : p.skin,
+    top: self ? state.avatar.top : p.top,
+    bottom: self ? state.avatar.bottom : p.bottom,
     room,
   };
 }
 
-export function startPresence() {
-  if (!supabase || !state.auth || channels.plaza) return;
-  for (const room of ROOMS) {
-    const ch = supabase.channel('room:' + room, {
-      config: { private: true, presence: { key: state.auth.id }, broadcast: { self: false } },
-    });
-    ch.on('presence', { event: 'sync' }, () => {
-      const map = new Map();
-      for (const [key, metas] of Object.entries(ch.presenceState())) {
-        const m = metas[metas.length - 1];
-        if (m && m.user_id === key) map.set(key, m);
-      }
-      roomState[room] = map;
-      emit();
-    });
-    if (room === 'plaza') {
-      ch.on('presence', { event: 'join' }, ({ key }) => {
-        if (key !== state.auth.id) broadcastHandlers.join?.(key);
-      });
-      ch.on('broadcast', { event: 'pos' }, ({ payload }) => broadcastHandlers.pos?.(payload));
-      ch.on('broadcast', { event: 'say' }, ({ payload }) => broadcastHandlers.say?.(payload));
-    }
-    ch.subscribe((status) => {
-      if (status === 'SUBSCRIBED' && currentRoom && channelFor(currentRoom) === room) {
-        ch.track(myMeta(currentRoom));
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        console.warn('[presence]', room, status);
-      }
-    });
-    channels[room] = ch;
-  }
-}
-
-// Called by nav() whenever the visible room changes.
-export async function setPresenceRoom(room) {
-  if (!channels.plaza || !room || room === currentRoom) return;
-  const prev = currentRoom;
-  currentRoom = room;
-  const prevCh = prev ? channels[channelFor(prev)] : null;
-  const nextCh = channels[channelFor(room)];
-  if (prevCh && prevCh !== nextCh && prevCh.state === 'joined') await prevCh.untrack();
-  if (nextCh?.state === 'joined') await nextCh.track(myMeta(room));
-}
-
-// Re-send our meta after the avatar or profile changed.
-export function retrackPresence() {
-  const ch = currentRoom ? channels[channelFor(currentRoom)] : null;
-  if (ch?.state === 'joined') ch.track(myMeta(currentRoom));
-}
-
-export function sendPlaza(event, payload) {
-  const ch = channels.plaza;
+function send(event, payload = {}) {
+  const ch = myChannel();
   if (ch?.state === 'joined') ch.send({ type: 'broadcast', event, payload });
 }
 
-// People whose tab is in `room` (deduped by user).
+function heartbeat() {
+  if (currentRoom) send('here', { room: currentRoom });
+}
+
+function onMessage(fromId, event, payload) {
+  if (fromId === me()) return;
+  const p = payload && typeof payload === 'object' ? payload : {};
+  if (event === 'here') {
+    const room = typeof p.room === 'string' ? p.room.slice(0, 20) : 'plaza';
+    const wasOnline = isOnline(fromId);
+    const prevRoom = seen.get(fromId)?.room;
+    seen.set(fromId, { room, at: Date.now() });
+    if (!wasOnline) {
+      heartbeat();                          // let the newcomer see us right away
+      handlers.join?.(fromId);
+    }
+    if (!wasOnline || prevRoom !== room) emit();
+  } else if (event === 'bye') {
+    if (seen.delete(fromId)) emit();
+  } else if (event === 'pos' || event === 'say') {
+    if (!isOnline(fromId)) return;
+    handlers[event]?.({ ...p, user_id: fromId });   // identity from the topic only
+  }
+}
+
+function subscribeTo(id) {
+  if (!id || channels.has(id)) return;
+  const ch = supabase.channel(topicOf(id), { config: { private: true, broadcast: { self: false } } });
+  for (const ev of ['here', 'bye', 'pos', 'say']) {
+    ch.on('broadcast', { event: ev }, ({ payload }) => onMessage(id, ev, payload));
+  }
+  ch.subscribe((status) => {
+    if (status === 'SUBSCRIBED' && id === me()) heartbeat();
+    else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.warn('[presence]', topicOf(id), status);
+  });
+  channels.set(id, ch);
+}
+
+function isOnline(id) {
+  if (id === me()) return true;
+  const s = seen.get(id);
+  return !!s && Date.now() - s.at < STALE_MS;
+}
+
+// Subscribe to every member's topic (and pick up new members later).
+export function syncPresenceMembers() {
+  if (!started) return;
+  subscribeTo(me());
+  for (const p of state.profiles || []) subscribeTo(p.user_id);
+  emit();   // profiles changed: names/looks shown for online people may have too
+}
+
+export function startPresence() {
+  if (!supabase || !state.auth || started) return;
+  started = true;
+  syncPresenceMembers();
+  setInterval(heartbeat, HEARTBEAT_MS);
+  // Drop people whose heartbeats stopped.
+  setInterval(() => {
+    let changed = false;
+    for (const [id, s] of seen) if (Date.now() - s.at >= STALE_MS) { seen.delete(id); changed = true; }
+    if (changed) emit();
+  }, 4000);
+  window.addEventListener('pagehide', () => send('bye'));
+}
+
+// Called by nav() whenever the visible room changes.
+export function setPresenceRoom(room) {
+  if (!room || room === currentRoom) return;
+  currentRoom = room;
+  heartbeat();
+  emit();
+}
+
+// Our look changed: tell others to re-read profiles (they get it from the
+// profiles table; the heartbeat just nudges counts/rooms).
+export function retrackPresence() { heartbeat(); emit(); }
+
+// Plaza broadcasts go out on our own topic only.
+export function sendPlaza(event, payload) {
+  if (event !== 'pos' && event !== 'say') return;
+  const { user_id, ...rest } = payload || {};   // never send an id; the topic is the id
+  send(event, rest);
+}
+
+// People whose tab is in `room` (including us).
 export function usersInRoom(room) {
-  const map = roomState[channelFor(room)];
-  if (!map) return [];
-  return [...map.values()].filter((m) => m.room === room);
+  const out = [];
+  if (me() && currentRoom === room) out.push(metaFor(me(), room));
+  for (const [id, s] of seen) if (isOnline(id) && s.room === room) out.push(metaFor(id, room));
+  return out;
 }
 
 export function onlineUserIds() {
   const ids = new Set();
-  for (const map of Object.values(roomState)) for (const id of map.keys()) ids.add(id);
+  if (me()) ids.add(me());
+  for (const id of seen.keys()) if (isOnline(id)) ids.add(id);
   return ids;
 }
 
-export function presenceReady() { return !!channels.plaza; }
+export function presenceReady() { return started; }

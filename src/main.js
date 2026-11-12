@@ -22,7 +22,7 @@ import { eventsHTML, initEvents } from './views/events.js';
 import { guideHTML, initGuide } from './views/guide.js';
 import { membersHTML, initMembers, renderMembers } from './views/members.js';
 import { gamesHTML, initGames } from './views/games.js';
-import { startPresence, onPresenceChange } from './core/presence.js';
+import { startPresence, onPresenceChange, syncPresenceMembers } from './core/presence.js';
 import { renderChatCount } from './core/chat.js';
 import { renderOnlineChip } from './views/app-shell.js';
 
@@ -98,6 +98,7 @@ async function boot() {
 
   if (state.auth) {
     subscribeProfiles(() => {
+      syncPresenceMembers();   // a new member's topic, and fresh looks for avatars
       import('./views/members.js').then(m => m.renderMembers());
     });
   }

@@ -2,7 +2,8 @@
 //
 // Arrow keys / WASD move your avatar; Space says hi. Everyone else in the
 // plaza is drawn from live presence (src/core/presence.js): their look comes
-// from their profile, their position from `pos` broadcasts, which are sent
+// from their profile, their position from `pos` broadcasts on their own
+// user:<id> topic (only they can send there), which are sent
 // only when you move and at most 8 times a second. Positions travel as
 // 0..1 fractions of the walkable area so they line up on any screen size,
 // and other avatars glide smoothly between updates.
@@ -232,7 +233,8 @@ function broadcastMyPosition(force = false) {
   const now = performance.now();
   if (!force && (key === lastSent.key || now - lastSent.at < SEND_EVERY_MS)) return;
   lastSent = { at: now, key };
-  sendPlaza('pos', { user_id: state.auth.id, nx, ny, dir: state.plaza.dir, walking });
+  // No user id in the payload: receivers know it's us from our topic.
+  sendPlaza('pos', { nx, ny, dir: state.plaza.dir, walking });
 }
 
 // ---- The player ----
@@ -374,7 +376,7 @@ export function showMyBubble(text) {
   me.prepend(b);
   state.plaza.bubble = t;
   state.plaza.bubbleUntil = performance.now() + 3200;
-  if (state.auth) sendPlaza('say', { user_id: state.auth.id, text: t });
+  if (state.auth) sendPlaza('say', { text: t });
 }
 
 function sayHi() {

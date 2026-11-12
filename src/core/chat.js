@@ -40,7 +40,8 @@ function rowToMsg(row) {
 
 async function loadChats() {
   state.chats = emptyRooms();
-  if (!supabase) return;
+  // Messages are readable only when signed in (migration 0010).
+  if (!supabase || !state.auth) return;
   const { data, error } = await supabase
     .from('messages')
     .select('*')
@@ -60,7 +61,7 @@ async function loadChats() {
 }
 
 function subscribeChats() {
-  if (!supabase) return;
+  if (!supabase || !state.auth) return;
   supabase
     .channel('messages-stream')
     .on('postgres_changes',

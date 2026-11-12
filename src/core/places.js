@@ -21,7 +21,8 @@ let places = [];
 export function getPlaces() { return places; }
 
 export async function loadPlaces() {
-  if (!supabase) { places = []; return places; }
+  // Places are readable only when signed in (migration 0010).
+  if (!supabase || !state.auth) { places = []; return places; }
   const { data, error } = await supabase
     .from('places')
     .select('*')

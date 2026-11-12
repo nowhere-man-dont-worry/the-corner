@@ -1865,3 +1865,23 @@ body.app-view { transition: padding-right 0.25s ease; }
 .door.soon .door-icon { opacity: 0.35; filter: grayscale(1); }
 .door.soon .door-label { color: var(--muted) !important; }
 .door.soon .door-count { color: var(--body); font-weight: 600; }
+
+/* The hidden attribute always wins over a display set by a class
+   (e.g. .games-grid { display: grid } or .btn { display: inline-flex }). */
+[hidden] { display: none !important; }
+
+/* Reaction timer minigame */
+.mg-reaction {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding: 28px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; text-align: center;
+}
+.mg-reaction-title { font-family: var(--pixel); color: var(--muted); letter-spacing: 0.14em; }
+.mg-reaction-screen {
+  width: 100%; min-height: 180px; padding: 32px 20px; border: 0; border-radius: 12px;
+  font: inherit; font-size: 22px; font-weight: 600; cursor: pointer; user-select: none;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.mg-reaction-screen:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; }
+.mg-reaction-hint { font-size: 12px; color: var(--muted); }
+.mg-reaction-out { font-family: var(--pixel); font-size: 18px; color: var(--fg); min-height: 20px; letter-spacing: 0.08em; }

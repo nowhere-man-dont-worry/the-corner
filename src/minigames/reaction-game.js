@@ -5,7 +5,9 @@
 // finish_round): the server picks the random 1.5–4 s wait, and rejects a time
 // that doesn't match what it measured itself. Pressing during a wait is "too
 // early" and voids the run. Works with mouse, touch (pointer events) and
-// Space / Enter while the game is open.
+// Space / Enter while the game is open. Hiding the tab or leaving the window
+// mid-run cancels the run (background tabs get throttled timers, so their
+// times can't be trusted), and closes the open round on the server.
 //
 // Next to the game: a leaderboard (this week / all time, one row per person,
 // lowest average first), your personal best and your last 5 runs. It updates
@@ -34,6 +36,21 @@ let els = null;
 // phase: 'idle' | 'starting' | 'waiting' | 'go' | 'sending' | 'between' | 'done' | 'void'
 let run = null;     // { id, round, roundId, times: [], phase, goAt }
 let scope = 'week';
+
+const FOCUS_MSG = 'Run cancelled — the game needs this tab in focus. Start again when ready.';
+
+// finish_round's rejection reasons (migration 0012) in plain words.
+const PLAIN_REASON = {
+  'faster than humanly possible': 'too fast to be human',
+  'claims more time than the server saw': 'too slow to count',
+  'claims much faster than the server saw': 'network lag too high, try again',
+  'older than the round time limit': 'round expired',
+  'never finished': 'round expired',
+};
+function plainReason(res) {
+  if (res.status === 'expired') return 'round expired';
+  return PLAIN_REASON[res.reason] || 'the server could not verify that round';
+}
 
 const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
 const clearTimers = () => { for (const t of timers) clearTimeout(t); timers.clear(); };
@@ -70,13 +87,19 @@ async function beginRound() {
   try {
     r = await startRound(GAME_ID, run.id);
   } catch (e) {
-    if (!els) return;
+    if (!els || !run || run.phase === 'void') return;
     run.phase = 'void';
     setScreen("couldn't start the round", 'var(--surface-2)', 'var(--fg)');
     showIdle(e.message);
     return;
   }
   if (!els || !run) return;
+  if (run.phase === 'void') {
+    // Cancelled (tab hidden / lost focus) while the round was being issued:
+    // close it on the server straight away.
+    finishRound(r.round_id, null, true).catch(() => {});
+    return;
+  }
   run.id = r.run_id;
   run.roundId = r.round_id;
   run.phase = 'waiting';
@@ -96,12 +119,31 @@ async function beginRound() {
 }
 
 function startRun() {
+  if (document.visibilityState !== 'visible' || !document.hasFocus()) {
+    els.msg.textContent = 'Click the game first so this tab has focus, then start.';
+    return;
+  }
   clearTimers();
   run = { id: null, round: 1, roundId: null, times: [], phase: 'idle', goAt: 0 };
   els.startBtn.hidden = true;
   els.msg.textContent = '';
   els.result.innerHTML = '';
   beginRound();
+}
+
+// The tab was hidden or lost focus mid-run: the timing can't be trusted any
+// more (browsers throttle timers and frames in the background), so the run is
+// void. Any open round is closed on the server as early=true.
+function cancelForFocus() {
+  if (!run || ['idle', 'done', 'void'].includes(run.phase)) return;
+  const openRound = ['waiting', 'arming', 'go'].includes(run.phase) ? run.roundId : null;
+  clearTimers();
+  if (frame) { cancelAnimationFrame(frame); frame = null; }
+  run.phase = 'void';
+  setScreen('run cancelled', 'var(--surface-2)', 'var(--fg)');
+  renderDots();
+  showIdle(FOCUS_MSG);
+  if (openRound) finishRound(openRound, null, true).catch(() => {});
 }
 
 async function tooEarly() {
@@ -129,11 +171,13 @@ async function react(at) {
     return;
   }
   if (!els || !run) return;
+  if (run.phase === 'void') return;   // cancelled while the answer was on its way
   if (res.status !== 'done') {
     run.phase = 'void';
     renderDots();
-    setScreen(res.status === 'expired' ? 'round timed out' : 'round rejected', 'var(--surface-2)', 'var(--fg)');
-    showIdle(`The server didn't accept that round (${res.reason || res.status}). Start a new run.`);
+    const why = plainReason(res);
+    setScreen(why, 'var(--surface-2)', 'var(--fg)');
+    showIdle(`That round didn't count: ${why}. Start a new run.`);
     return;
   }
   run.times.push(res.client_ms);
@@ -247,6 +291,12 @@ function render(container) {
     e.stopImmediatePropagation();
     if (!e.repeat) press(e.timeStamp);
   }, { capture: true, signal });
+
+  // Hidden tab or lost focus during a run = cancelled run (see cancelForFocus).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') cancelForFocus();
+  }, { signal });
+  window.addEventListener('blur', cancelForFocus, { signal });
 
   container.querySelectorAll('[data-scope]').forEach((b) => b.addEventListener('click', () => {
     scope = b.dataset.scope;

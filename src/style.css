@@ -1916,3 +1916,60 @@ body.app-view { transition: padding-right 0.25s ease; }
 .rx-recent b { color: var(--fg); }
 .door-top { font-size: 10px; color: var(--butter); margin-top: 2px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; }
 .door-top:empty { display: none; }
+
+/* ================================================================
+   LANDING — Hanken Grotesk throughout (pixel-font bits stay pixel),
+   new headline, and the two pixel characters with cycling bubbles.
+   Everything here is scoped to #landing.
+   ================================================================ */
+#landing { font-family: var(--display); font-weight: 500; }
+#landing .landing-main { max-width: 980px; }
+#landing .landing-h {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(42px, 7.6vw, 104px);
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+#landing .landing-h .accent { display: block; font-weight: 500; }
+#landing .landing-sub { font-weight: 500; color: var(--body); }   /* --body is #c8bcaf in dark, readable in light */
+#landing .eyebrow, #landing .mono { font-weight: 400; }   /* pixel bits stay exactly as before */
+#landing .btn { font-family: var(--display); font-weight: 700; }
+#landing .landing-small { width: fit-content; max-width: 100%; margin: 28px auto 0; font-size: 12px; color: var(--dim); font-weight: 500; }
+#landing .landing-foot { font-family: var(--display); font-weight: 500; }
+
+/* Characters: beside the text on wide screens, as in the original design,
+   level with the subtext / button so they never cover the headline. */
+#landing .landing-chars { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+#landing .char { display: flex; }
+#landing .char-l { left: min(90px, 6vw); top: 450px; }
+#landing .char-r { right: min(90px, 6vw); top: 430px; }
+#landing .bubble { font-family: var(--display); font-weight: 500; transition: opacity 0.25s ease; }
+#landing .bubble.fading { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  #landing .char { animation: none; }
+  #landing .bubble { transition: none; }
+}
+
+/* Narrower screens: the characters move below the button, smaller, side by
+   side, each with its bubble; the footer flows after them. */
+@media (max-width: 1279px) {
+  #landing .landing-main { padding-bottom: 0; }
+  #landing .landing-chars {
+    position: relative; inset: auto; display: flex; justify-content: center;
+    align-items: flex-end; gap: 28px; margin: 36px auto 0; max-width: 520px;
+  }
+  #landing .char { position: relative; left: auto; right: auto; top: auto; flex: 0 1 50%; min-width: 0; }
+  #landing .bubble { max-width: 200px; }
+  #landing .landing-foot { position: relative; left: auto; right: auto; bottom: auto; margin: 44px auto 0; max-width: 1280px; gap: 12px; flex-wrap: wrap; }
+}
+@media (max-width: 759px) {
+  #landing .landing-main { margin-top: 56px; }
+  #landing .landing-chars { gap: 12px; margin-top: 30px; }
+  #landing .char svg { width: 48px; height: 72px; }
+  #landing .bubble { font-size: 12px; padding: 7px 10px; max-width: 150px; }
+  #landing .landing-foot { justify-content: center; text-align: center; }
+  #landing .logo, #landing .landing-top .mono { white-space: nowrap; }
+  #landing .landing-top .mono { font-size: 12px !important; padding: 4px 9px !important; }
+  #landing .landing-top > div:last-child { gap: 8px !important; }
+}

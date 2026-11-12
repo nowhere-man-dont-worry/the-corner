@@ -147,7 +147,7 @@ export function renderMatcher() {
   }
   card.innerHTML = `
     <div style="min-width:0;flex:1">
-      <div class="page-key" style="color:var(--butter)">◉ CLASSMATE MATCHER · WEEKLY</div>
+      <div class="page-key match-key">◉ CLASSMATE MATCHER · WEEKLY</div>
       <div style="font-size:14px;color:var(--body);line-height:1.45">Every Sunday everyone who opted in gets shuffled into groups of three for a coffee. Opt out any time.</div>
       ${status}
     </div>

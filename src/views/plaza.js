@@ -209,7 +209,8 @@ function updateOthers(dt, ts) {
     o.y += (t.y - o.y) * k;
     const moving = Math.abs(t.x - o.x) > 0.6 || Math.abs(t.y - o.y) > 0.6 || o.walking;
     let dx = 0;
-    while (placed.some((q) => Math.abs(q.x - (o.x + dx)) < 30 && Math.abs(q.y - o.y) < 24) && dx < 300) dx += 36;
+    // Avatars are ~56px wide: anything closer than that overlaps.
+    while (placed.some((q) => Math.abs(q.x - (o.x + dx)) < 52 && Math.abs(q.y - o.y) < 40) && dx < 400) dx += 58;
     placed.push({ x: o.x + dx, y: o.y });
     o.el.style.left = o.x + dx + 'px';
     o.el.style.bottom = 600 - o.y + 'px';

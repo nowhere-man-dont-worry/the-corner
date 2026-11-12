@@ -1850,3 +1850,7 @@ body.app-view { transition: padding-right 0.25s ease; }
 .mem-tools .mem-chip-row { margin-bottom: 0; flex: 1 1 320px; min-width: 0; }
 .mem-head-row { min-width: 0; }
 @media (max-width: 620px) { .mem-tools .search { flex-basis: 100%; } }
+
+/* The floor starts below the doors (top 150 + 170 tall), so it never hides
+   their labels on short windows. */
+.room .floor { top: 320px; height: auto; bottom: 0; }
